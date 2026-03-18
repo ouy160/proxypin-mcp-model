@@ -366,6 +366,12 @@ abstract class AppLocalizations {
   /// **'Copied to clipboard'**
   String get copied;
 
+  /// No description provided for @execute.
+  ///
+  /// In en, this message translates to:
+  /// **'Execute'**
+  String get execute;
+
   /// No description provided for @cancel.
   ///
   /// In en, this message translates to:
@@ -449,6 +455,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Export successful'**
   String get exportSuccess;
+
+  /// No description provided for @exportFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Export failed'**
+  String get exportFailed;
 
   /// No description provided for @deleteSuccess.
   ///

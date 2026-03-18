@@ -144,6 +144,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get copied => 'Copied to clipboard';
 
   @override
+  String get execute => 'Execute';
+
+  @override
   String get cancel => 'Cancel';
 
   @override
@@ -184,6 +187,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get exportSuccess => 'Export successful';
+
+  @override
+  String get exportFailed => 'Export failed';
 
   @override
   String get deleteSuccess => 'Delete successful';

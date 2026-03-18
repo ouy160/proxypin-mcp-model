@@ -47,7 +47,8 @@
   "autoStartup": "自动开启抓包",
   "autoStartupDescribe": "程序启动时自动开始记录流量",
 
-  "copied": "已复制到剪贴板",
+  "copied": "已复制到剪切板",
+  "execute": "执行",
   "cancel": "取消",
   "close": "关闭",
   "save": "保存",
@@ -62,6 +63,7 @@
   "importFailed": "导入失败",
   "export": "导出",
   "exportSuccess": "导出成功",
+  "exportFailed": "导出失败",
   "deleteSuccess": "删除成功",
   "send": "发送",
   "fail": "失败",

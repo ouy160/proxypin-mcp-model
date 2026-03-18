@@ -1,4 +1,4 @@
-/*
+﻿/*
  * Copyright 2023 Hongen Wang
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -113,7 +113,8 @@ Widget multiWindow(int windowId, Map<dynamic, dynamic> argument) {
 
   // 请求拦截
   if (argument['name'] == 'RequestBreakpointPage') {
-    return RequestBreakpointPage(windowId: windowId);
+    return futureWidget(
+        RequestBreakpointManager.instance, (manager) => RequestBreakpointPage(windowId: windowId, manager: manager));
   }
 
   if (argument['name'] == 'QrCodePage') {
@@ -329,14 +330,20 @@ void registerMethodHandler() {
     }
 
     if (call.method == 'resumeRequest') {
-      var request = HttpRequest.fromJson(jsonDecode(jsonEncode(call.arguments['request'])));
+      var request = call.arguments['request'] == null
+          ? null
+          : HttpRequest.fromJson(jsonDecode(jsonEncode(call.arguments['request'])));
       RequestBreakpointInterceptor.instance.resumeRequest(call.arguments['requestId'], request);
       return 'done';
     }
 
     if (call.method == 'resumeResponse') {
-      var response = HttpResponse.fromJson(jsonDecode(jsonEncode(call.arguments['response'])));
-      response.requestId = call.arguments['requestId'];
+      var response = call.arguments['response'] == null
+          ? null
+          : HttpResponse.fromJson(jsonDecode(jsonEncode(call.arguments['response'])));
+      if (response != null) {
+        response.requestId = call.arguments['requestId'];
+      }
       RequestBreakpointInterceptor.instance.resumeResponse(call.arguments['requestId'], response);
       return 'done';
     }
@@ -381,4 +388,3 @@ Future<void> openScriptConsoleWindow() async {
     ..center();
   window.show();
 }
-
