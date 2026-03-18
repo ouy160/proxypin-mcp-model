@@ -889,7 +889,11 @@ class McpTools {
       return _toolResult({
         'statusCode': ioResponse.statusCode,
         'reasonPhrase': ioResponse.reasonPhrase,
-        'headers': Map.fromEntries(ioResponse.headers.toList().map((h) => MapEntry(h.name, h.value))),
+        'headers': () {
+          final hdrs = <String, String>{};
+          ioResponse.headers.forEach((name, values) => hdrs[name] = values.join(', '));
+          return hdrs;
+        }(),
         'bodyLength': responseBody.length,
         'truncated': truncated,
         'body': truncated ? '${responseBody.substring(0, 10000)}...' : responseBody,
