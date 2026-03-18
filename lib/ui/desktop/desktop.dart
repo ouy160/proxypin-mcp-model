@@ -37,8 +37,11 @@ import 'package:proxypin/ui/desktop/toolbar/toolbar.dart';
 import 'package:proxypin/ui/desktop/widgets/windows_toolbar.dart';
 import 'package:proxypin/utils/listenable_list.dart';
 
+import 'package:proxypin/network/mcp/mcp_server.dart';
+
 import '../app_update/app_update_repository.dart';
 import '../component/split_view.dart';
+import '../toolbox/mcp_server_page.dart';
 import '../toolbox/toolbox.dart';
 
 /// @author wanghongen
@@ -93,6 +96,9 @@ class _DesktopHomePagePageState extends State<DesktopHomePage> implements EventL
     proxyServer.addListener(this);
     panel = NetworkTabController(tabStyle: const TextStyle(fontSize: 16), proxyServer: proxyServer);
 
+    // 绑定抓包数据容器到 MCP Server
+    McpServer.instance.bindRequestContainer(container);
+
     if (widget.appConfiguration.upgradeNoticeV25) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         showUpgradeNotice();
@@ -108,7 +114,8 @@ class _DesktopHomePagePageState extends State<DesktopHomePage> implements EventL
       DesktopRequestListWidget(key: requestListStateKey, proxyServer: proxyServer, list: container, panel: panel),
       Favorites(panel: panel),
       HistoryPageWidget(proxyServer: proxyServer, container: container, panel: panel),
-      const Toolbox()
+      const Toolbox(),
+      const McpServerPage(),
     ];
 
     return Scaffold(
@@ -131,19 +138,25 @@ class _DesktopHomePagePageState extends State<DesktopHomePage> implements EventL
             LeftNavigationBar(
                 selectIndex: _selectIndex, appConfiguration: widget.appConfiguration, proxyServer: proxyServer),
             Expanded(
-              child: VerticalSplitView(
-                  ratio: widget.appConfiguration.panelRatio,
-                  minRatio: 0.15,
-                  maxRatio: 0.9,
-                  onRatioChanged: (ratio) {
-                    widget.appConfiguration.panelRatio = double.parse(ratio.toStringAsFixed(2));
-                    widget.appConfiguration.flushConfig();
-                  },
-                  left: ValueListenableBuilder(
-                      valueListenable: _selectIndex,
-                      builder: (_, index, __) =>
-                          LazyIndexedStack(index: index < 0 ? 0 : index, children: navigationView)),
-                  right: panel),
+              child: ValueListenableBuilder(
+                valueListenable: _selectIndex,
+                builder: (_, index, __) {
+                  // MCP 页面（索引4）和工具箱（索引3）独占整个内容区域
+                  if (index >= 3) {
+                    return LazyIndexedStack(index: index < 0 ? 0 : index, children: navigationView);
+                  }
+                  return VerticalSplitView(
+                      ratio: widget.appConfiguration.panelRatio,
+                      minRatio: 0.15,
+                      maxRatio: 0.9,
+                      onRatioChanged: (ratio) {
+                        widget.appConfiguration.panelRatio = double.parse(ratio.toStringAsFixed(2));
+                        widget.appConfiguration.flushConfig();
+                      },
+                      left: LazyIndexedStack(index: index < 0 ? 0 : index, children: navigationView),
+                      right: panel);
+                },
+              ),
             )
           ],
         ));

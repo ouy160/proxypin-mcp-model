@@ -1063,6 +1063,79 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get view => '查看';
+
+  @override
+  String get mcpServer => 'MCP 服务';
+
+  @override
+  String get mcpServerDesc => 'MCP 服务让 AI 工具能够访问抓包数据进行分析';
+
+  @override
+  String mcpRunning(Object port) {
+    return '正在运行，端口 $port';
+  }
+
+  @override
+  String get mcpStopped => '已停止';
+
+  @override
+  String get mcpStopToChange => '停止服务后可修改端口';
+
+  @override
+  String get mcpConnectionInfo => '连接信息';
+
+  @override
+  String get mcpConfigGuide => 'AI 配置指南';
+
+  @override
+  String get mcpGuideStep1 => '点击上方的开始按钮启动 MCP 服务。';
+
+  @override
+  String get mcpGuideStep2 => '复制 MCP 配置 JSON，添加到你的 AI 工具的 MCP 设置中。';
+
+  @override
+  String get mcpGuideStep3 => '支持的 AI 工具：Cursor、Windsurf、Claude Desktop 等。';
+
+  @override
+  String get mcpAvailableTools => '可用工具';
+
+  @override
+  String get mcpToolListDesc => '获取抓包请求列表（支持过滤）';
+
+  @override
+  String get mcpToolDetailDesc => '获取请求/响应完整详情';
+
+  @override
+  String get mcpToolStatsDesc => '获取流量统计分析';
+
+  @override
+  String get mcpToolSearchDesc => '高级多条件搜索';
+
+  @override
+  String get mcpToolBodyDesc => '获取请求/响应体内容';
+
+  @override
+  String get mcpToolAnalyzeDesc => '分析加密/编码内容并尝试解码';
+
+  @override
+  String get mcpToolDomainDesc => '按域名分组汇总请求数据';
+
+  @override
+  String get mcpToolCookieDesc => '提取和分析 Cookie 信息';
+
+  @override
+  String get mcpToolCompareDesc => '对比两个请求的差异';
+
+  @override
+  String mcpStartSuccess(Object port) {
+    return 'MCP 服务已启动，端口 $port';
+  }
+
+  @override
+  String get mcpStopSuccess => 'MCP 服务已停止';
+
+  @override
+  String get mcpInvalidPort => '无效的端口号';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -2125,4 +2198,77 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get view => '檢視';
+
+  @override
+  String get mcpServer => 'MCP 服務';
+
+  @override
+  String get mcpServerDesc => 'MCP 服務讓 AI 工具能夠存取抓包資料進行分析';
+
+  @override
+  String mcpRunning(Object port) {
+    return '正在運行，連接埠 $port';
+  }
+
+  @override
+  String get mcpStopped => '已停止';
+
+  @override
+  String get mcpStopToChange => '停止服務後可修改連接埠';
+
+  @override
+  String get mcpConnectionInfo => '連線資訊';
+
+  @override
+  String get mcpConfigGuide => 'AI 設定指南';
+
+  @override
+  String get mcpGuideStep1 => '點選上方的開始按鈕啟動 MCP 服務。';
+
+  @override
+  String get mcpGuideStep2 => '複製 MCP 設定 JSON，新增到你的 AI 工具的 MCP 設定中。';
+
+  @override
+  String get mcpGuideStep3 => '支援的 AI 工具：Cursor、Windsurf、Claude Desktop 等。';
+
+  @override
+  String get mcpAvailableTools => '可用工具';
+
+  @override
+  String get mcpToolListDesc => '取得抓包請求列表（支援過濾）';
+
+  @override
+  String get mcpToolDetailDesc => '取得請求/回應完整詳情';
+
+  @override
+  String get mcpToolStatsDesc => '取得流量統計分析';
+
+  @override
+  String get mcpToolSearchDesc => '進階多條件搜尋';
+
+  @override
+  String get mcpToolBodyDesc => '取得請求/回應體內容';
+
+  @override
+  String get mcpToolAnalyzeDesc => '分析加密/編碼內容並嘗試解碼';
+
+  @override
+  String get mcpToolDomainDesc => '按域名分組匯總請求資料';
+
+  @override
+  String get mcpToolCookieDesc => '提取和分析 Cookie 資訊';
+
+  @override
+  String get mcpToolCompareDesc => '對比兩個請求的差異';
+
+  @override
+  String mcpStartSuccess(Object port) {
+    return 'MCP 服務已啟動，連接埠 $port';
+  }
+
+  @override
+  String get mcpStopSuccess => 'MCP 服務已停止';
+
+  @override
+  String get mcpInvalidPort => '無效的連接埠號';
 }

@@ -373,5 +373,29 @@
 
   "local": "Local",
   "remoteUrl": "Remote URL",
-  "view": "View"
+  "view": "View",
+
+  "mcpServer": "MCP Server",
+  "mcpServerDesc": "MCP Server for AI tools to access captured traffic data",
+  "mcpRunning": "Running on port {port}",
+  "mcpStopped": "Stopped",
+  "mcpStopToChange": "Stop server to change port",
+  "mcpConnectionInfo": "Connection Info",
+  "mcpConfigGuide": "AI Configuration Guide",
+  "mcpGuideStep1": "Click the Start button above to start MCP Server.",
+  "mcpGuideStep2": "Copy the MCP Config JSON and add it to your AI tool's MCP settings.",
+  "mcpGuideStep3": "Supported AI tools: Cursor, Windsurf, Claude Desktop, etc.",
+  "mcpAvailableTools": "Available Tools",
+  "mcpToolListDesc": "Get captured request list with filtering",
+  "mcpToolDetailDesc": "Get full request/response details",
+  "mcpToolStatsDesc": "Get traffic statistics and analysis",
+  "mcpToolSearchDesc": "Advanced multi-condition search",
+  "mcpToolBodyDesc": "Get request/response body content",
+  "mcpToolAnalyzeDesc": "Analyze encrypted/encoded content and try decoding",
+  "mcpToolDomainDesc": "Group and summarize requests by domain",
+  "mcpToolCookieDesc": "Extract and analyze Cookie information",
+  "mcpToolCompareDesc": "Compare differences between two requests",
+  "mcpStartSuccess": "MCP Server started on port {port}",
+  "mcpStopSuccess": "MCP Server stopped",
+  "mcpInvalidPort": "Invalid port number"
 }

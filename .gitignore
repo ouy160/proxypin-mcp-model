@@ -48,3 +48,4 @@ app.*.map.json
 l10n_errors.txt
 pubspec.lock
 /dist/
+.ace-tool/

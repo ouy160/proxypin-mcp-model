@@ -2171,6 +2171,144 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'View'**
   String get view;
+
+  /// No description provided for @mcpServer.
+  ///
+  /// In en, this message translates to:
+  /// **'MCP Server'**
+  String get mcpServer;
+
+  /// No description provided for @mcpServerDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'MCP Server for AI tools to access captured traffic data'**
+  String get mcpServerDesc;
+
+  /// No description provided for @mcpRunning.
+  ///
+  /// In en, this message translates to:
+  /// **'Running on port {port}'**
+  String mcpRunning(Object port);
+
+  /// No description provided for @mcpStopped.
+  ///
+  /// In en, this message translates to:
+  /// **'Stopped'**
+  String get mcpStopped;
+
+  /// No description provided for @mcpStopToChange.
+  ///
+  /// In en, this message translates to:
+  /// **'Stop server to change port'**
+  String get mcpStopToChange;
+
+  /// No description provided for @mcpConnectionInfo.
+  ///
+  /// In en, this message translates to:
+  /// **'Connection Info'**
+  String get mcpConnectionInfo;
+
+  /// No description provided for @mcpConfigGuide.
+  ///
+  /// In en, this message translates to:
+  /// **'AI Configuration Guide'**
+  String get mcpConfigGuide;
+
+  /// No description provided for @mcpGuideStep1.
+  ///
+  /// In en, this message translates to:
+  /// **'Click the Start button above to start MCP Server.'**
+  String get mcpGuideStep1;
+
+  /// No description provided for @mcpGuideStep2.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy the MCP Config JSON and add it to your AI tool\'s MCP settings.'**
+  String get mcpGuideStep2;
+
+  /// No description provided for @mcpGuideStep3.
+  ///
+  /// In en, this message translates to:
+  /// **'Supported AI tools: Cursor, Windsurf, Claude Desktop, etc.'**
+  String get mcpGuideStep3;
+
+  /// No description provided for @mcpAvailableTools.
+  ///
+  /// In en, this message translates to:
+  /// **'Available Tools'**
+  String get mcpAvailableTools;
+
+  /// No description provided for @mcpToolListDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Get captured request list with filtering'**
+  String get mcpToolListDesc;
+
+  /// No description provided for @mcpToolDetailDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Get full request/response details'**
+  String get mcpToolDetailDesc;
+
+  /// No description provided for @mcpToolStatsDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Get traffic statistics and analysis'**
+  String get mcpToolStatsDesc;
+
+  /// No description provided for @mcpToolSearchDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Advanced multi-condition search'**
+  String get mcpToolSearchDesc;
+
+  /// No description provided for @mcpToolBodyDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Get request/response body content'**
+  String get mcpToolBodyDesc;
+
+  /// No description provided for @mcpToolAnalyzeDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Analyze encrypted/encoded content and try decoding'**
+  String get mcpToolAnalyzeDesc;
+
+  /// No description provided for @mcpToolDomainDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Group and summarize requests by domain'**
+  String get mcpToolDomainDesc;
+
+  /// No description provided for @mcpToolCookieDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Extract and analyze Cookie information'**
+  String get mcpToolCookieDesc;
+
+  /// No description provided for @mcpToolCompareDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Compare differences between two requests'**
+  String get mcpToolCompareDesc;
+
+  /// No description provided for @mcpStartSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'MCP Server started on port {port}'**
+  String mcpStartSuccess(Object port);
+
+  /// No description provided for @mcpStopSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'MCP Server stopped'**
+  String get mcpStopSuccess;
+
+  /// No description provided for @mcpInvalidPort.
+  ///
+  /// In en, this message translates to:
+  /// **'Invalid port number'**
+  String get mcpInvalidPort;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

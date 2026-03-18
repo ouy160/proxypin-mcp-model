@@ -350,5 +350,29 @@
 
   "local": "本地",
   "remoteUrl": "遠端URL",
-  "view": "檢視"
+  "view": "檢視",
+
+  "mcpServer": "MCP 服務",
+  "mcpServerDesc": "MCP 服務讓 AI 工具能夠存取抓包資料進行分析",
+  "mcpRunning": "正在運行，連接埠 {port}",
+  "mcpStopped": "已停止",
+  "mcpStopToChange": "停止服務後可修改連接埠",
+  "mcpConnectionInfo": "連線資訊",
+  "mcpConfigGuide": "AI 設定指南",
+  "mcpGuideStep1": "點選上方的開始按鈕啟動 MCP 服務。",
+  "mcpGuideStep2": "複製 MCP 設定 JSON，新增到你的 AI 工具的 MCP 設定中。",
+  "mcpGuideStep3": "支援的 AI 工具：Cursor、Windsurf、Claude Desktop 等。",
+  "mcpAvailableTools": "可用工具",
+  "mcpToolListDesc": "取得抓包請求列表（支援過濾）",
+  "mcpToolDetailDesc": "取得請求/回應完整詳情",
+  "mcpToolStatsDesc": "取得流量統計分析",
+  "mcpToolSearchDesc": "進階多條件搜尋",
+  "mcpToolBodyDesc": "取得請求/回應體內容",
+  "mcpToolAnalyzeDesc": "分析加密/編碼內容並嘗試解碼",
+  "mcpToolDomainDesc": "按域名分組匯總請求資料",
+  "mcpToolCookieDesc": "提取和分析 Cookie 資訊",
+  "mcpToolCompareDesc": "對比兩個請求的差異",
+  "mcpStartSuccess": "MCP 服務已啟動，連接埠 {port}",
+  "mcpStopSuccess": "MCP 服務已停止",
+  "mcpInvalidPort": "無效的連接埠號"
 }

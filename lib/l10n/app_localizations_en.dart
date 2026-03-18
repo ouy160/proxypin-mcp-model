@@ -1076,4 +1076,77 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get view => 'View';
+
+  @override
+  String get mcpServer => 'MCP Server';
+
+  @override
+  String get mcpServerDesc => 'MCP Server for AI tools to access captured traffic data';
+
+  @override
+  String mcpRunning(Object port) {
+    return 'Running on port $port';
+  }
+
+  @override
+  String get mcpStopped => 'Stopped';
+
+  @override
+  String get mcpStopToChange => 'Stop server to change port';
+
+  @override
+  String get mcpConnectionInfo => 'Connection Info';
+
+  @override
+  String get mcpConfigGuide => 'AI Configuration Guide';
+
+  @override
+  String get mcpGuideStep1 => 'Click the Start button above to start MCP Server.';
+
+  @override
+  String get mcpGuideStep2 => 'Copy the MCP Config JSON and add it to your AI tool\'s MCP settings.';
+
+  @override
+  String get mcpGuideStep3 => 'Supported AI tools: Cursor, Windsurf, Claude Desktop, etc.';
+
+  @override
+  String get mcpAvailableTools => 'Available Tools';
+
+  @override
+  String get mcpToolListDesc => 'Get captured request list with filtering';
+
+  @override
+  String get mcpToolDetailDesc => 'Get full request/response details';
+
+  @override
+  String get mcpToolStatsDesc => 'Get traffic statistics and analysis';
+
+  @override
+  String get mcpToolSearchDesc => 'Advanced multi-condition search';
+
+  @override
+  String get mcpToolBodyDesc => 'Get request/response body content';
+
+  @override
+  String get mcpToolAnalyzeDesc => 'Analyze encrypted/encoded content and try decoding';
+
+  @override
+  String get mcpToolDomainDesc => 'Group and summarize requests by domain';
+
+  @override
+  String get mcpToolCookieDesc => 'Extract and analyze Cookie information';
+
+  @override
+  String get mcpToolCompareDesc => 'Compare differences between two requests';
+
+  @override
+  String mcpStartSuccess(Object port) {
+    return 'MCP Server started on port $port';
+  }
+
+  @override
+  String get mcpStopSuccess => 'MCP Server stopped';
+
+  @override
+  String get mcpInvalidPort => 'Invalid port number';
 }
