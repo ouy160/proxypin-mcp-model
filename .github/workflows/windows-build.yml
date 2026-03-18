@@ -1,12 +1,12 @@
-name: Build Windows Release
+name: CI — Windows Build (branch only)
 
+# 仅在 mcp-main 分支推送或手动触发时执行
+# tag 触发的多平台发布已迁移至 release.yml
 on:
   workflow_dispatch:
   push:
     branches:
       - mcp-main
-    tags:
-      - 'v*'
 
 jobs:
   build-windows:
@@ -42,8 +42,8 @@ jobs:
       - name: Read App Version
         shell: pwsh
         run: |
-          $line = Select-String -Path pubspec.yaml -Pattern '^version:\s*(.+)$'
-          $version = $line.Matches[0].Groups[1].Value.Trim()
+          $raw = (Select-String -Path pubspec.yaml -Pattern '^version:\s*(.+)$').Matches[0].Groups[1].Value.Trim()
+          $version = $raw.Split('+')[0]
           "APP_VERSION=$version" >> $env:GITHUB_ENV
 
       - name: Package Artifact
@@ -61,11 +61,3 @@ jobs:
           name: ${{ env.ARTIFACT_NAME }}
           path: ${{ env.ARTIFACT_PATH }}
           if-no-files-found: error
-
-      - name: Create GitHub Release
-        if: startsWith(github.ref, 'refs/tags/')
-        uses: softprops/action-gh-release@v2
-        with:
-          files: ${{ env.ARTIFACT_PATH }}
-          generate_release_notes: true
-          fail_on_unmatched_files: true

@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:proxypin/network/components/interceptor.dart';
 import 'package:proxypin/network/components/manager/request_breakpoint_manager.dart';
 import 'package:proxypin/network/http/http.dart';
+import 'package:proxypin/network/mcp/mcp_intercept_queue.dart';
 import 'package:proxypin/network/util/cache.dart';
 import 'package:proxypin/network/util/logger.dart';
 import 'package:proxypin/ui/component/multi_window.dart';
@@ -30,11 +31,16 @@ class RequestBreakpointInterceptor extends Interceptor {
         Completer<HttpRequest?> completer = Completer();
         _pausedRequests[request.requestId] = completer;
 
+        // 同步到 MCP 拦截队列（供 AI 工具读取）
+        McpInterceptQueue.instance.addPendingRequest(request.requestId, request);
+
         // Open Breakpoint Executor Window
         MultiWindow.openWindow("Breakpoint - Request", 'BreakpointExecutor',
             args: {'type': 'request', 'request': request.toJson(), 'requestId': request.requestId});
 
         return completer.future.then((req) {
+          McpInterceptQueue.instance.remove(request.requestId);
+
           if (req == null) {
             logger.d('Request ${request.requestId} was resumed null, aborting request');
             return null;
@@ -72,6 +78,9 @@ class RequestBreakpointInterceptor extends Interceptor {
         Completer<HttpResponse?> completer = Completer();
         _pausedResponses[request.requestId] = completer;
 
+        // 同步到 MCP 拦截队列
+        McpInterceptQueue.instance.addPendingResponse(request.requestId, request, response);
+
         // Open Breakpoint Executor Window
         MultiWindow.openWindow("Breakpoint - Response", 'BreakpointExecutor', args: {
           'type': 'response',
@@ -81,6 +90,8 @@ class RequestBreakpointInterceptor extends Interceptor {
         });
 
         return completer.future.then((res) {
+          McpInterceptQueue.instance.remove(request.requestId);
+
           if (res == null) {
             return null;
           }
