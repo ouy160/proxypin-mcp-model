@@ -55,8 +55,15 @@ class BodyReader {
 
     _offset = 0;
 
-    if (message.headers.contentType == 'video/x-flv' || message.headers.contentType.startsWith("text/event-stream")) {
-      //Directly forward without processing for now
+    // Check for streaming response types that should be forwarded without buffering
+    final contentType = message.headers.contentType;
+    final isStreamingContentType = contentType == 'video/x-flv' ||
+        contentType.startsWith('text/event-stream') ||
+        // NDJSON streaming: application/json with chunked encoding
+        (contentType.startsWith('application/json') && message.headers.isChunked);
+
+    if (isStreamingContentType) {
+      // Directly forward without processing for streaming responses
       return Result(false, supportedParse: false, body: data);
     }
 
