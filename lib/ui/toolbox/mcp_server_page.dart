@@ -375,16 +375,15 @@ class _McpServerPageState extends State<McpServerPage> {
             ),
             const SizedBox(height: 6),
             // 动态展示所有工具：分类 → 工具
-            ..._buildGroupedTools(theme),
+            ..._buildGroupedTools(tools, theme),
           ],
         ),
       ),
     );
   }
 
-  /// 顺序展示所有工具（自动从 McpTools.getToolDefinitions() 拉取）
-  List<Widget> _buildGroupedTools(ThemeData theme) {
-    final tools = McpTools.getToolDefinitions();
+  /// 顺序展示所有工具（tools 由调用方传入，避免重复调用 McpTools.getToolDefinitions()）
+  List<Widget> _buildGroupedTools(List<Map<String, dynamic>> tools, ThemeData theme) {
     return tools.map((tool) {
       final name = tool['name'] as String? ?? '';
       final desc = tool['description'] as String? ?? '';
