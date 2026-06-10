@@ -18,6 +18,7 @@ import 'dart:convert';
 import 'dart:io' as io;
 import 'dart:math';
 
+import 'package:proxypin/network/bin/server.dart';
 import 'package:proxypin/network/components/manager/rewrite_rule.dart';
 import 'package:proxypin/network/components/manager/request_breakpoint_manager.dart';
 import 'package:proxypin/network/components/manager/request_rewrite_manager.dart';
@@ -347,6 +348,26 @@ class McpTools {
           },
         },
       },
+
+      // ── F. 抓包控制 ───────────────────────────────────────────────────────
+      {
+        'name': 'start_capture',
+        'description':
+            '启动 ProxyPin 抓包服务。开启后系统代理会被设置，ProxyPin 将开始监听并捕获所有 HTTP(S) 流量。',
+        'inputSchema': {'type': 'object', 'properties': {}},
+      },
+      {
+        'name': 'stop_capture',
+        'description':
+            '停止 ProxyPin 抓包服务。停止后将不再捕获新的请求，已捕获的请求仍保留在列表中。',
+        'inputSchema': {'type': 'object', 'properties': {}},
+      },
+      {
+        'name': 'clear_requests',
+        'description':
+            '清空当前已捕获的所有请求列表。会移除容器中的全部请求数据，注意该操作不可恢复。',
+        'inputSchema': {'type': 'object', 'properties': {}},
+      },
     ];
   }
 
@@ -414,6 +435,13 @@ class McpTools {
         return _analyzeAuth(arguments, container);
       case 'extract_api_endpoints':
         return _extractApiEndpoints(arguments, container);
+      // F. 抓包控制
+      case 'start_capture':
+        return _startCapture();
+      case 'stop_capture':
+        return _stopCapture();
+      case 'clear_requests':
+        return _clearRequests(container);
       default:
         return _toolError('未知工具: $toolName');
     }
@@ -1576,6 +1604,110 @@ class McpTools {
         .replaceAll(RegExp(r'/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}', caseSensitive: false), '/{uuid}')
         .replaceAll(RegExp(r'/\d{5,}'), '/{id}')
         .replaceAll(RegExp(r'/\d{1,4}(?=/|$)'), '/{n}');
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // F. 抓包控制
+  // ══════════════════════════════════════════════════════════════════════════
+
+  /// 启动抓包
+  static Future<Map<String, dynamic>> _startCapture() async {
+    final proxyServer = ProxyServer.current;
+    if (proxyServer == null) {
+      return _toolError('ProxyServer 未初始化，请先在 ProxyPin 桌面端打开抓包页面');
+    }
+    if (proxyServer.isRunning) {
+      return _toolResult({
+        'message': '抓包服务已在运行中',
+        'status': _buildProxyStatus(proxyServer, null),
+      });
+    }
+    try {
+      await proxyServer.start();
+      return _toolResult({
+        'message': '抓包服务已启动',
+        'status': _buildProxyStatus(proxyServer, null),
+      });
+    } catch (e) {
+      return _toolResult({
+        'message': '启动抓包失败',
+        'error': '$e',
+        'status': _buildProxyStatus(proxyServer, null),
+      });
+    }
+  }
+
+  /// 停止抓包
+  static Future<Map<String, dynamic>> _stopCapture() async {
+    final proxyServer = ProxyServer.current;
+    if (proxyServer == null) {
+      return _toolError('ProxyServer 未初始化，请先在 ProxyPin 桌面端打开抓包页面');
+    }
+    if (!proxyServer.isRunning) {
+      return _toolResult({
+        'message': '抓包服务未在运行',
+        'status': _buildProxyStatus(proxyServer, null),
+      });
+    }
+    try {
+      await proxyServer.stop();
+      return _toolResult({
+        'message': '抓包服务已停止',
+        'status': _buildProxyStatus(proxyServer, null),
+      });
+    } catch (e) {
+      return _toolResult({
+        'message': '停止抓包失败',
+        'error': '$e',
+        'status': _buildProxyStatus(proxyServer, null),
+      });
+    }
+  }
+
+  /// 清空抓包列表
+  static Map<String, dynamic> _clearRequests(ListenableList<HttpRequest> container) {
+    final proxyServer = ProxyServer.current;
+    final cleared = container.length;
+    container.clear();
+    return _toolResult({
+      'message': '已清空抓包列表',
+      'clearedCount': cleared,
+      'status': _buildProxyStatus(proxyServer, container),
+    });
+  }
+
+  /// 构造 ProxyPin 实际状态（统一返回，便于 Python 等客户端解析）
+  static Map<String, dynamic> _buildProxyStatus(
+      ProxyServer? proxyServer, ListenableList<HttpRequest>? container) {
+    final status = <String, dynamic>{
+      'running': proxyServer?.isRunning ?? false,
+      'requestCount': container?.length ?? 0,
+    };
+
+    if (proxyServer != null) {
+      final config = proxyServer.configuration;
+      status['port'] = proxyServer.port;
+      status['sslEnabled'] = proxyServer.enableSsl;
+      status['systemProxyEnabled'] = config.enableSystemProxy;
+      status['socks5Enabled'] = config.enableSocks5;
+      status['http2Enabled'] = config.enabledHttp2;
+      status['proxyPassDomains'] = config.proxyPassDomains;
+      if (config.externalProxy != null) {
+        status['externalProxy'] = {
+          'enabled': config.externalProxy!.enabled,
+          'host': config.externalProxy!.host,
+          'port': config.externalProxy!.port,
+        };
+      }
+    } else {
+      status['port'] = null;
+      status['sslEnabled'] = null;
+      status['systemProxyEnabled'] = null;
+      status['socks5Enabled'] = null;
+      status['http2Enabled'] = null;
+      status['proxyPassDomains'] = null;
+    }
+    return status;
   }
 
   // ══════════════════════════════════════════════════════════════════════════
