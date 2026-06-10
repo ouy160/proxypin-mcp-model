@@ -170,4 +170,9 @@ class ProxyServer {
   void addListener(EventListener listener) {
     listeners.add(listener);
   }
+
+  /// 释放资源，关闭状态广播流控制器，防止内存泄漏
+  void dispose() {
+    _statusController.close();
+  }
 }
