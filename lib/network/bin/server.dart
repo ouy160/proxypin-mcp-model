@@ -54,6 +54,12 @@ class ProxyServer {
   //配置
   final Configuration configuration;
 
+  /// 状态变化广播流（start/stop 后通知订阅者更新 UI）
+  final StreamController<bool> _statusController = StreamController<bool>.broadcast();
+
+  /// 状态变化事件，参数为新的 running 状态
+  Stream<bool> get onStatusChanged => _statusController.stream;
+
   ProxyServer(this.configuration) {
     current = this;
   }
@@ -110,6 +116,7 @@ class ProxyServer {
 
       //初始化证书
       CertificateManager.initCAConfig();
+      _statusController.add(true);
       return server;
     });
   }
@@ -125,6 +132,7 @@ class ProxyServer {
     }
     logger.i("stop on $port");
     await server?.stop();
+    _statusController.add(false);
     return server;
   }
 

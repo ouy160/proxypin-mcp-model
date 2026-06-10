@@ -59,6 +59,12 @@ class DesktopRequestListState extends State<DesktopRequestListWidget> with Autom
   //请求列表容器
   ListenableList<HttpRequest> container = ListenableList();
 
+  //container 订阅器，用于响应外部（包含 MCP）触发的清空事件
+  OnchangeListEvent<HttpRequest>? _containerChangeEvent;
+
+  //当前是否已为该 container 绑定了订阅
+  ListenableList<HttpRequest>? _subscribedContainer;
+
   bool sortDesc = true;
 
   AppLocalizations get localizations => AppLocalizations.of(context)!;
@@ -68,6 +74,35 @@ class DesktopRequestListState extends State<DesktopRequestListWidget> with Autom
     super.initState();
     if (widget.list != null) {
       container = widget.list!;
+      _bindContainerListener(container);
+    }
+  }
+
+  /// 订阅 container，使外部清空请求也能驱动 UI 刷新
+  void _bindContainerListener(ListenableList<HttpRequest> c) {
+    if (_subscribedContainer == c) return;
+    _unbindContainerListener();
+    _containerChangeEvent = OnchangeListEvent(_onContainerChanged);
+    c.addListener(_containerChangeEvent!);
+    _subscribedContainer = c;
+  }
+
+  void _unbindContainerListener() {
+    if (_containerChangeEvent != null && _subscribedContainer != null) {
+      _subscribedContainer!.removeListener(_containerChangeEvent!);
+    }
+    _containerChangeEvent = null;
+    _subscribedContainer = null;
+  }
+
+  /// container 变化的回调。container 长度从非空变为 0 时，刷新 UI 内部状态
+  void _onContainerChanged() {
+    if (!mounted) return;
+    if (container.isEmpty) {
+      domainListKey.currentState?.clean();
+      requestSequenceKey.currentState?.clean();
+      widget.panel.change(null, null);
+      setState(() {});
     }
   }
 
@@ -76,6 +111,7 @@ class DesktopRequestListState extends State<DesktopRequestListWidget> with Autom
 
   @override
   void dispose() {
+    _unbindContainerListener();
     super.dispose();
   }
 

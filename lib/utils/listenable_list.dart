@@ -127,9 +127,18 @@ class ListenableList<T> extends Iterable<T> {
   }
 
   clear() {
+    if (source.isEmpty) {
+      // 即使为空也调用 listener.clear()，让订阅者有机会重置自身状态
+      for (var element in _listeners) {
+        element.clear();
+      }
+      return;
+    }
+    final removed = List<T>.from(source);
     source.clear();
+    // 先广播批量移除，让 UI 能在 source 已被清空前收到事件
     for (var element in _listeners) {
-      element.clear();
+      element.onBatchRemove(removed);
     }
   }
 

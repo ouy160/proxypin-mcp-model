@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -35,6 +36,8 @@ import 'package:proxypin/ui/desktop/left_menus/navigation.dart';
 import 'package:proxypin/ui/desktop/request/list.dart';
 import 'package:proxypin/ui/desktop/toolbar/toolbar.dart';
 import 'package:proxypin/ui/desktop/widgets/windows_toolbar.dart';
+import 'package:proxypin/ui/launch/launch.dart';
+import 'package:proxypin/utils/lang.dart';
 import 'package:proxypin/utils/listenable_list.dart';
 
 import 'package:proxypin/network/mcp/mcp_server.dart';
@@ -65,6 +68,9 @@ class _DesktopHomePagePageState extends State<DesktopHomePage> implements EventL
 
   late ProxyServer proxyServer = ProxyServer(widget.configuration);
   late NetworkTabController panel;
+
+  //ProxyServer 状态变化订阅（确保 MCP 启停代理后 UI 同步）
+  StreamSubscription<bool>? _proxyStatusSub;
 
   AppLocalizations get localizations => AppLocalizations.of(context)!;
 
@@ -98,6 +104,14 @@ class _DesktopHomePagePageState extends State<DesktopHomePage> implements EventL
 
     McpServer.instance.bindRequestContainer(container);
 
+    // 订阅 ProxyServer 状态变化，让 MCP 启停代理后 UI 同步刷新
+    _proxyStatusSub = proxyServer.onStatusChanged.listen((running) {
+      if (!mounted) return;
+      // 同步到 SocketLaunch 的全局 startStatus，使工具栏按钮状态实时变化
+      SocketLaunch.startStatus.value = ValueWrap.of(running);
+      setState(() {});
+    });
+
     if (widget.appConfiguration.upgradeNoticeV26) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         showUpgradeNotice();
@@ -105,6 +119,13 @@ class _DesktopHomePagePageState extends State<DesktopHomePage> implements EventL
     } else {
       AppUpdateRepository.checkUpdate(context);
     }
+  }
+
+  @override
+  void dispose() {
+    _proxyStatusSub?.cancel();
+    _proxyStatusSub = null;
+    super.dispose();
   }
 
   @override
