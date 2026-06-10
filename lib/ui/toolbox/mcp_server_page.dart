@@ -20,6 +20,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_toastr/flutter_toastr.dart';
 import 'package:proxypin/network/mcp/mcp_server.dart';
+import 'package:proxypin/network/mcp/mcp_tools.dart';
 import 'package:proxypin/l10n/app_localizations.dart';
 
 /// MCP Server 管理页面
@@ -327,6 +328,8 @@ class _McpServerPageState extends State<McpServerPage> {
 
   /// AI 配置指南
   Widget _buildConfigGuide(ThemeData theme, bool isDark) {
+    // 从 McpTools 动态获取所有工具定义（包含 name + description）
+    final tools = McpTools.getToolDefinitions();
     return Card(
       elevation: 0,
       shape: RoundedRectangleBorder(
@@ -351,21 +354,42 @@ class _McpServerPageState extends State<McpServerPage> {
             _buildGuideItem(theme, '2', localizations.mcpGuideStep2),
             _buildGuideItem(theme, '3', localizations.mcpGuideStep3),
             const SizedBox(height: 8),
-            Text('${localizations.mcpAvailableTools}:', style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600)),
-            const SizedBox(height: 4),
-            _buildToolItem(theme, 'get_request_list', localizations.mcpToolListDesc),
-            _buildToolItem(theme, 'get_request_detail', localizations.mcpToolDetailDesc),
-            _buildToolItem(theme, 'get_request_stats', localizations.mcpToolStatsDesc),
-            _buildToolItem(theme, 'search_requests', localizations.mcpToolSearchDesc),
-            _buildToolItem(theme, 'get_request_body', localizations.mcpToolBodyDesc),
-            _buildToolItem(theme, 'analyze_encrypted_content', localizations.mcpToolAnalyzeDesc),
-            _buildToolItem(theme, 'get_domain_summary', localizations.mcpToolDomainDesc),
-            _buildToolItem(theme, 'get_cookie_info', localizations.mcpToolCookieDesc),
-            _buildToolItem(theme, 'compare_requests', localizations.mcpToolCompareDesc),
+            Row(
+              children: [
+                Text('${localizations.mcpAvailableTools}:',
+                    style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600)),
+                const SizedBox(width: 6),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.primary.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text('${tools.length}',
+                      style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w600,
+                          color: theme.colorScheme.primary)),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            // 动态展示所有工具：分类 → 工具
+            ..._buildGroupedTools(theme),
           ],
         ),
       ),
     );
+  }
+
+  /// 顺序展示所有工具（自动从 McpTools.getToolDefinitions() 拉取）
+  List<Widget> _buildGroupedTools(ThemeData theme) {
+    final tools = McpTools.getToolDefinitions();
+    return tools.map((tool) {
+      final name = tool['name'] as String? ?? '';
+      final desc = tool['description'] as String? ?? '';
+      return _buildToolItem(theme, name, desc);
+    }).toList();
   }
 
   Widget _buildGuideItem(ThemeData theme, String step, String text) {
@@ -394,19 +418,25 @@ class _McpServerPageState extends State<McpServerPage> {
 
   Widget _buildToolItem(ThemeData theme, String name, String desc) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 3),
-      child: Row(
+      padding: const EdgeInsets.only(bottom: 8, left: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const SizedBox(width: 8),
-          Icon(Icons.build_circle_outlined, size: 12, color: theme.iconTheme.color?.withValues(alpha: 0.4)),
-          const SizedBox(width: 6),
-          Text(name,
-              style: TextStyle(
-                  fontFamily: 'monospace', fontSize: 11, fontWeight: FontWeight.w600, color: Colors.blue.shade300)),
-          const SizedBox(width: 8),
-          Expanded(
-              child: Text(desc,
-                  style: theme.textTheme.bodySmall?.copyWith(fontSize: 11), overflow: TextOverflow.ellipsis)),
+          Row(
+            children: [
+              Icon(Icons.build_circle_outlined, size: 13, color: theme.iconTheme.color?.withValues(alpha: 0.5)),
+              const SizedBox(width: 6),
+              Text(name,
+                  style: TextStyle(
+                      fontFamily: 'monospace', fontSize: 12, fontWeight: FontWeight.w600, color: Colors.blue.shade300)),
+            ],
+          ),
+          const SizedBox(height: 2),
+          Padding(
+            padding: const EdgeInsets.only(left: 19),
+            child: Text(desc,
+                style: theme.textTheme.bodySmall?.copyWith(fontSize: 11, height: 1.4), maxLines: 3, overflow: TextOverflow.ellipsis),
+          ),
         ],
       ),
     );
