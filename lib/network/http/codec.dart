@@ -170,12 +170,23 @@ abstract class HttpCodec<T extends HttpMessage> implements Codec<T, T> {
 
     //请求头
     bool isChunked = message.headers.isChunked;
-    message.headers.remove(HttpHeaders.TRANSFER_ENCODING);
+    bool isSSE = message.headers.contentType.toLowerCase().contains('text/event-stream');
 
-    if (body != null && (body.isNotEmpty || isChunked)) {
-      message.headers.contentLength = body.length;
-    } else if (message.contentLength != 0) {
+    // For SSE streams: remove Content-Length, keep Transfer-Encoding: chunked
+    // so client knows to use chunked decoding
+    if (isSSE) {
       message.headers.remove(HttpHeaders.CONTENT_LENGTH);
+      if (!message.headers.isChunked) {
+        message.headers.set(HttpHeaders.TRANSFER_ENCODING, 'chunked');
+      }
+    } else {
+      message.headers.remove(HttpHeaders.TRANSFER_ENCODING);
+
+      if (body != null && (body.isNotEmpty || isChunked)) {
+        message.headers.contentLength = body.length;
+      } else if (message.contentLength != 0) {
+        message.headers.remove(HttpHeaders.CONTENT_LENGTH);
+      }
     }
 
     message.headers.forEach((key, values) {
@@ -192,8 +203,9 @@ abstract class HttpCodec<T extends HttpMessage> implements Codec<T, T> {
     builder.addByte(HttpConstants.cr);
     builder.addByte(HttpConstants.lf);
 
-    //请求体
-    builder.add(body ?? Uint8List(0));
+    //请求体 - SSE streams should not include body in initial response
+    // because client needs to stream data continuously
+    builder.add(isSSE ? Uint8List(0) : (body ?? Uint8List(0)));
     return builder.toBytes();
   }
 
