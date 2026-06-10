@@ -1,0 +1,7 @@
+[SIMPLE] ISSUE-02: 消除_buildConfigGuide中McpTools.getToolDefinitions重复调用 - 简化工作流完成
+
+- _buildConfigGuide 仅在自身调用一次 McpTools.getToolDefinitions()
+- _buildGroupedTools 签名扩展为 (List<Map<String, dynamic>> tools, ThemeData theme)
+- 由 _buildConfigGuide 传入 tools 复用，消除重复调用
+- UI 行为不变（tools 数量与列表展示保持一致）
+- TDD 验证：v1_problem 修复前红→修复后绿；v2_fix 全部验收点通过
