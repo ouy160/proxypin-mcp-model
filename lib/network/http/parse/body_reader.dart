@@ -19,6 +19,7 @@ import 'dart:typed_data';
 
 import 'package:proxypin/network/http/constants.dart';
 import 'package:proxypin/network/http/http.dart';
+import 'package:proxypin/network/util/compress.dart';
 
 import '../../../utils/num.dart';
 import '../codec.dart';
@@ -55,15 +56,9 @@ class BodyReader {
 
     _offset = 0;
 
-    // Check for streaming response types that should be forwarded without buffering
-    final contentType = message.headers.contentType;
-    final isStreamingContentType = contentType == 'video/x-flv' ||
-        contentType.startsWith('text/event-stream') ||
-        // NDJSON streaming: application/json with chunked encoding
-        (contentType.startsWith('application/json') && message.headers.isChunked);
-
-    if (isStreamingContentType) {
-      // Directly forward without processing for streaming responses
+    if (message.headers.contentType == 'video/x-flv' || message.headers.contentType.startsWith("text/event-stream")) {
+      // For SSE streams, forward raw bytes - chunked encoding and Brotli decompression
+      // will be handled at the SseChannelHandler level where data can be accumulated
       return Result(false, supportedParse: false, body: data);
     }
 

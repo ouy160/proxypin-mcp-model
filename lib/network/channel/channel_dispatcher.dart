@@ -14,7 +14,6 @@ import 'package:proxypin/network/util/byte_buf.dart';
 import 'package:proxypin/network/util/logger.dart';
 import 'package:proxypin/network/util/process_info.dart';
 import 'package:proxypin/network/handle/sse_handle.dart';
-import 'package:proxypin/network/handle/ndjson_handle.dart';
 
 import '../util/task_queue.dart';
 
@@ -219,62 +218,30 @@ class ChannelDispatcher extends ChannelHandler<Uint8List> {
 
     // Flush any initial body bytes that were already read
     if (initialBody != null && initialBody.isNotEmpty) {
-      // Place existing buffered bytes and let handler consume
-      buffer.add(initialBody);
-      var body = buffer.bytes;
-      buffer.clear();
-      handler.channelRead(channelContext, channel, body);
-    }
-  }
-
-  /// NDJSON 处理 (application/json + chunked)
-  void onNdjsonHandle(ChannelContext channelContext, Channel channel, HttpResponse response, List<int>? initialBody) {
-    Channel remoteChannel = channelContext.getAttribute(channel.id);
-    channelContext.currentRequest?.response = response;
-    response.request ??= channelContext.currentRequest;
-    channelContext.listener?.onResponse(channelContext, response);
-
-    remoteChannel.write(channelContext, response);
-
-    // Switch to raw streaming: server->client uses NdjsonChannelHandler; client->server just relays
-    var rawCodec = RawCodec();
-    channel.dispatcher.channelHandle(rawCodec, NdjsonChannelHandler(remoteChannel, response));
-    remoteChannel.dispatcher.channelHandle(rawCodec, RelayHandler(channel));
-
-    // Flush any initial body bytes that were already read
-    if (initialBody != null && initialBody.isNotEmpty) {
-      // Place existing buffered bytes and let handler consume
-      buffer.add(initialBody);
-      var body = buffer.bytes;
-      buffer.clear();
-      handler.channelRead(channelContext, channel, body);
+      // Don't add to buffer (which contains already-consumed HTTP headers)
+      // Pass initialBody directly to handler
+      handler.channelRead(channelContext, channel, Uint8List.fromList(initialBody));
     }
   }
 
   void notSupportedForward(ChannelContext channelContext, Channel channel, DecoderResult decodeResult) {
     Channel? remoteChannel = channelContext.getAttribute(channel.id);
 
-    // If this is an SSE or NDJSON response, switch to streaming mode instead of generic relay
+    logger.d("[notSupportedForward] channel=$channel remoteChannel=$remoteChannel");
+
+    // If this is an SSE response, switch to SSE streaming mode instead of generic relay
     if (decodeResult.data is HttpResponse) {
       var response = decodeResult.data as HttpResponse;
-      final contentType = response.headers.contentType.toLowerCase();
-
-      // Check for SSE (text/event-stream)
-      if (contentType.startsWith('text/event-stream') && remoteChannel != null) {
+      logger.d("[notSupportedForward] Content-Type=${response.headers.contentType} isSSE=${response.headers.contentType.toLowerCase().startsWith('text/event-stream')} remoteChannel!=null=${remoteChannel != null}");
+      if (response.headers.contentType.toLowerCase().startsWith('text/event-stream') && remoteChannel != null) {
         logger.d("[$channel] switch to SSE streaming");
         onSseHandle(channelContext, channel, response, decodeResult.forward);
-        return;
-      }
-
-      // Check for NDJSON (application/json + chunked)
-      if (contentType.startsWith('application/json') && response.headers.isChunked && remoteChannel != null) {
-        logger.d("[$channel] switch to NDJSON streaming");
-        onNdjsonHandle(channelContext, channel, response, decodeResult.forward);
         return;
       }
     }
 
     // Fallback: generic relay for unsupported body types
+    logger.d("[notSupportedForward] Fallback to relay (SSE not matched or remoteChannel is null)");
     buffer.add(decodeResult.forward ?? []);
     relay(channelContext, channel, remoteChannel!);
 

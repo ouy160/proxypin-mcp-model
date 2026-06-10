@@ -129,6 +129,8 @@ abstract class HttpCodec<T extends HttpMessage> implements Codec<T, T> {
         if (bodyResult != null && !bodyResult.supportedParse) {
           result.supportedParse = false;
           result.forward = bodyResult.body;
+          // Also set body so UI can display it (initially raw compressed data, will be updated by SseChannelHandler)
+          result.data!.body = bodyResult.body;
           return result;
         }
       }
