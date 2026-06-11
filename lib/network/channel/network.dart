@@ -243,15 +243,6 @@ class Server extends Network {
         return;
       }
 
-      if (remoteChannel == null) {
-        // SOCKS5 场景：channelContext.serverChannel 未被 CONNECT 预创建
-        // 需要在这里主动创建到目标主机的上游通道
-        logger.d('[SSL-DEBUG] ssl() creating upstream channel to ${hostAndPort.host}:${hostAndPort.port} '
-          'via socks5=${channelContext.getAttribute(AttributeKeys.socks5Proxy) != null}');
-        remoteChannel = await channelContext.connectServerChannel(hostAndPort, RelayHandler(channel));
-        logger.d('[SSL-DEBUG] ssl() upstream channel created, remoteChannel.id=${remoteChannel.id}');
-      }
-
       if (remoteChannel != null && !remoteChannel.isSsl) {
         var supportProtocols = configuration.enabledHttp2 ? TLS.supportProtocols(data) : ['http/1.1'];
         logger.d('[SSL-DEBUG] ssl() starting upstream TLS to ${hostAndPort.host}:${hostAndPort.port} '
@@ -259,7 +250,7 @@ class Server extends Network {
         await remoteChannel.startSecureSocket(channelContext, host: serviceName, supportedProtocols: supportProtocols);
         logger.d('[SSL-DEBUG] ssl() upstream TLS connected, remoteChannel.isSsl=${remoteChannel.isSsl} '
           'selectedProtocol=${remoteChannel.selectedProtocol}');
-      } else if (remoteChannel.isSsl) {
+      } else if (remoteChannel != null && remoteChannel.isSsl) {
         logger.d('[SSL-DEBUG] ssl() remoteChannel already SSL, selectedProtocol=${remoteChannel.selectedProtocol}');
       }
 
