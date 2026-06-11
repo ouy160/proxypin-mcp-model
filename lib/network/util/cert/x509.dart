@@ -231,7 +231,7 @@ class X509Utils {
       }
 
       if (keyUsage != null) {
-        extensionTopSequence.add(keyUsageSequence(keyUsage)!);
+        extensionTopSequence.add(keyUsageSequence(keyUsage, critical: keyUsage.critical)!);
       }
 
       if (sans != null && sans.isNotEmpty) {
@@ -253,9 +253,12 @@ class X509Utils {
       }
 
       // Add Subject Key Identifier (2.5.29.14)
+      // OpenSSL 用双层 OCTET STRING 包装: ext_value = OS(22) { OS(20) { 20 bytes } }
+      final skiInnerOs = ASN1OctetString(octets: leafSki);
+      final skiOuterOs = ASN1OctetString(octets: skiInnerOs.encode());
       var skiSequence = ASN1Sequence();
       skiSequence.add(Extension.subjectKeyIdentifier);
-      skiSequence.add(ASN1OctetString(octets: leafSki));
+      skiSequence.add(skiOuterOs);
       extensionTopSequence.add(skiSequence);
 
       // Add Authority Key Identifier (2.5.29.35)
@@ -456,12 +459,12 @@ class X509Utils {
     return extensions;
   }
 
-  static ASN1Sequence? keyUsageSequence(ExtensionKeyUsage keyUsages) {
+  static ASN1Sequence? keyUsageSequence(ExtensionKeyUsage keyUsages, {bool? critical}) {
     var octetString = ASN1OctetString(octets: keyUsages.bitString.encode());
 
     var keyUsageSequence = ASN1Sequence();
     keyUsageSequence.add(Extension.keyUsage);
-    if (keyUsages.critical) {
+    if (critical ?? keyUsages.critical) {
       keyUsageSequence.add(ASN1Boolean(true));
     }
     keyUsageSequence.add(octetString);

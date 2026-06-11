@@ -1,0 +1,8 @@
+Task-ID,Title,Type,Priority,Status,File,Depends-On,Notes
+T-01,在 extension.dart 添加 AKI/SKI OID 常量,code,P0,待处理,lib/network/util/cert/extension.dart,,
+T-02,实现 SKI 计算工具函数,code,P0,待处理,lib/network/util/cert/x509.dart,T-01,
+T-03,在 generateSelfSignedCertificate 添加 AKI/SKI 扩展生成,code,P0,待处理,lib/network/util/cert/x509.dart,T-01;T-02,
+T-04,在 _getExtensionsFromSeq 添加 AKI/SKI 扩展解析,code,P0,待处理,lib/network/util/cert/x509.dart,T-01,
+T-05,在 cert_data.dart 添加 AKI/SKI 字段,code,P0,待处理,lib/network/util/cert/cert_data.dart,T-03,
+T-06,在 test/x509_test.dart 添加 AKI/SKI 单元测试,test,P0,待处理,test/x509_test.dart,T-03;T-04;T-05,
+T-07,端到端集成验证 MITM 握手 + 代理抓包,test,P0,待处理,test/test_minimax_api.py,T-06,

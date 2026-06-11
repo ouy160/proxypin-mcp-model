@@ -82,11 +82,13 @@ class CertificateManager {
     }
 
     String cer = generate(_caCert!, _serverKeyPair.publicKey as RSAPublicKey, _caPriKey, host);
-
     var rsaPrivateKey = _serverKeyPair.privateKey as RSAPrivateKey;
 
+    // 客户端验证时需要完整的证书链 (leaf + CA).
+    final caPem = await certificatePem();
+    final chainPem = '$cer\n$caPem';
     securityContext = SecurityContext(withTrustedRoots: true)
-      ..useCertificateChainBytes(cer.codeUnits)
+      ..useCertificateChainBytes(chainPem.codeUnits)
       ..allowLegacyUnsafeRenegotiation = true
       ..usePrivateKeyBytes(CryptoUtils.encodeRSAPrivateKeyToPemPkcs1(rsaPrivateKey).codeUnits);
 
@@ -114,10 +116,11 @@ class CertificateManager {
       'OU': 'ProxyPin',
     };
 
-    x509Subject['CN'] = host;
-
     var csrPem = X509Utils.generateSelfSignedCertificate(caRoot, serverPubKey, caPriKey, 365,
-        sans: [host], serialNumber: Random().nextInt(1000000).toString(), subject: x509Subject);
+        sans: [host],
+        extKeyUsage: [ExtendedKeyUsage.SERVER_AUTH],
+        keyUsage: ExtensionKeyUsage(ExtensionKeyUsage.digitalSignature | ExtensionKeyUsage.keyEncipherment),
+        serialNumber: Random().nextInt(1000000).toString(), subject: x509Subject);
     return csrPem;
   }
 
