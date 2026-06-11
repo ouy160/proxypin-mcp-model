@@ -178,6 +178,7 @@ class CertificateManager {
     await keyFile.writeAsString(serverPriKeyPem);
     cleanCache();
     _state = StartState.uninitialized;
+    await initCAConfig();
   }
 
   ///重置默认根证书
