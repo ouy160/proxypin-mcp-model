@@ -140,6 +140,8 @@ class Server extends Network {
 
   @override
   Future<void> onEvent(Uint8List data, ChannelContext channelContext, Channel channel) async {
+    logger.d('[SSL-DEBUG] onEvent entry: channelId=${channel.id} dataLen=${data.length} '
+      'firstBytesHex=${data.length >= 8 ? data.sublist(0, 8).map((b) => b.toRadixString(16).padLeft(2, '0')).join(' ') : 'short'}');
     //手机扫码转发远程地址
     if (configuration.remoteHost != null) {
       channelContext.putAttribute(AttributeKeys.remote, HostAndPort.of(configuration.remoteHost!));
@@ -160,6 +162,7 @@ class Server extends Network {
 
     //黑名单 或 没开启https 直接转发
     if ((HostFilter.filter(hostAndPort?.host)) || (hostAndPort?.isSsl() == true && configuration.enableSsl == false)) {
+      logger.d('[SSL-DEBUG] onEvent: short-circuit (host filter or enableSsl=false), relay path');
       var remoteChannel = channelContext.serverChannel ??
           await channelContext.connectServerChannel(hostAndPort!, RelayHandler(channel));
       relay(channel, remoteChannel);
@@ -169,12 +172,14 @@ class Server extends Network {
 
     //ssl握手
     if (hostAndPort?.isSsl() == true || TLS.isTLSClientHello(data)) {
+      logger.d('[SSL-DEBUG] onEvent: detected TLS ClientHello or ssl-host, entering ssl() handler');
       ssl(channelContext, channel, data);
       return;
     }
 
     //socks5
     if (configuration.enableSocks5 && Socks5.isSocks5(data) && channel.dispatcher.handler is! SocksServerHandler) {
+      logger.d('[SSL-DEBUG] onEvent: detected SOCKS5 handshake, switching to SocksServerHandler');
       channel.dispatcher.channelHandle(RawCodec(),
           SocksServerHandler(channel.dispatcher.decoder, channel.dispatcher.encoder, channel.dispatcher.handler));
     }
@@ -185,8 +190,14 @@ class Server extends Network {
   /// ssl握手
   void ssl(ChannelContext channelContext, Channel channel, Uint8List data) async {
     var hostAndPort = channelContext.host;
+    logger.d('[SSL-DEBUG] ssl() entry: channelId=${channel.id} '
+        'hasHostAndPort=${hostAndPort != null} enableSsl=${configuration.enableSsl} '
+        'clientHelloLen=${data.length}');
     try {
       String? serviceName = TLS.getDomain(data) ?? hostAndPort?.host;
+      logger.d('[SSL-DEBUG] ssl() resolved serviceName="$serviceName" via '
+        'TLS.getDomain=${TLS.getDomain(data) != null ? "yes" : "no"} '
+        'or hostAndPort.host=${hostAndPort?.host}');
       bool isHttp = true;
 
       if (hostAndPort == null) {
@@ -194,10 +205,12 @@ class Server extends Network {
         var port = 443;
 
         if (domain == null) {
+          logger.d('[SSL-DEBUG] ssl() domain is null, fetching remote address by port=${channel.remoteSocketAddress.port}');
           var remote = await ProcessInfoPlugin.getRemoteAddressByPort(channel.remoteSocketAddress.port);
           domain = remote?.host;
           port = remote?.port ?? port;
           serviceName = domain;
+          logger.d('[SSL-DEBUG] ssl() remote lookup: domain="$domain" port=$port');
 
           // DNS over HTTPS
           if (remote?.port == 853 && TLS.supportProtocols(data)?.contains("http/1.1") == false) {
@@ -205,6 +218,11 @@ class Server extends Network {
           }
         }
 
+        if (domain == null) {
+          logger.e('[SSL-DEBUG] ssl() ABORT: domain is null, cannot build hostAndPort');
+          channelContext.host ??= HostAndPort.host('unknown', 443, scheme: HostAndPort.httpsScheme);
+          return;
+        }
         hostAndPort = HostAndPort.host(domain!, port, scheme: HostAndPort.httpsScheme);
       }
 
@@ -212,8 +230,13 @@ class Server extends Network {
       channelContext.putAttribute(AttributeKeys.domain, hostAndPort.host);
 
       Channel? remoteChannel = channelContext.serverChannel;
+      logger.d('[SSL-DEBUG] ssl() hostAndPort=${hostAndPort.host}:${hostAndPort.port} '
+        'remoteChannel=${remoteChannel != null ? "exists isSsl=${remoteChannel.isSsl}" : "null"} '
+        'isHttp=$isHttp enableSsl=${configuration.enableSsl} '
+        'inHostFilter=${HostFilter.filter(hostAndPort.host)}');
 
       if (!isHttp || HostFilter.filter(hostAndPort.host) || !configuration.enableSsl) {
+        logger.d('[SSL-DEBUG] ssl() skip MITM: isHttp=$isHttp inHostFilter=${HostFilter.filter(hostAndPort.host)} enableSsl=${configuration.enableSsl}, using relay');
         remoteChannel = remoteChannel ?? await channelContext.connectServerChannel(hostAndPort, RelayHandler(channel));
         relay(channel, remoteChannel);
         channel.dispatcher.channelRead(channelContext, channel, data);
@@ -222,20 +245,33 @@ class Server extends Network {
 
       if (remoteChannel != null && !remoteChannel.isSsl) {
         var supportProtocols = configuration.enabledHttp2 ? TLS.supportProtocols(data) : ['http/1.1'];
+        logger.d('[SSL-DEBUG] ssl() starting upstream TLS to ${hostAndPort.host}:${hostAndPort.port} '
+          'alpn=${supportProtocols}');
         await remoteChannel.startSecureSocket(channelContext, host: serviceName, supportedProtocols: supportProtocols);
+        logger.d('[SSL-DEBUG] ssl() upstream TLS connected, remoteChannel.isSsl=${remoteChannel.isSsl} '
+          'selectedProtocol=${remoteChannel.selectedProtocol}');
+      } else if (remoteChannel == null) {
+        logger.w('[SSL-DEBUG] ssl() WARN: remoteChannel is null, no upstream TLS will be initiated');
+      } else if (remoteChannel.isSsl) {
+        logger.d('[SSL-DEBUG] ssl() remoteChannel already SSL, selectedProtocol=${remoteChannel.selectedProtocol}');
       }
 
       //ssl自签证书
+      logger.d('[SSL-DEBUG] ssl() requesting leaf cert for serviceName="$serviceName"');
       var certificate = await CertificateManager.getCertificateContext(serviceName!);
       var selectedProtocol = remoteChannel?.selectedProtocol;
 
       var supportedProtocols = selectedProtocol != null ? [selectedProtocol] : ['http/1.1'];
+      logger.d('[SSL-DEBUG] ssl() server TLS handshake: alpn=$supportedProtocols '
+        'clientSelectedFromUpstream=${remoteChannel?.selectedProtocol}');
 
       certificate.setAlpnProtocols(supportedProtocols, true);
 
       //处理客户端ssl握手
+      logger.d('[SSL-DEBUG] ssl() calling SecureSocket.secureServer for client of ${hostAndPort.host}');
       var secureSocket = await SecureSocket.secureServer(channel.socket, certificate,
           bufferedData: data, supportedProtocols: supportedProtocols);
+      logger.d('[SSL-DEBUG] ssl() SecureSocket.secureServer success, serverSelectedProtocol=${secureSocket.selectedProtocol}');
 
       channel.serverSecureSocket(secureSocket, channelContext);
       remoteChannel?.listen(channelContext);
@@ -245,6 +281,7 @@ class Server extends Network {
             '[${channelContext.clientChannel?.id}] $hostAndPort ssl handshake done, clientSelectedProtocol: ${secureSocket.selectedProtocol}, serverSelectedProtocols: $supportedProtocols');
       }
     } catch (error, trace) {
+      logger.e('[SSL-DEBUG] ssl() EXCEPTION for ${hostAndPort?.host}: $error', error: error, stackTrace: trace);
       logger.e('[${channelContext.clientChannel?.id}] $hostAndPort ssl error', error: error, stackTrace: trace);
       try {
         channelContext.processInfo ??=

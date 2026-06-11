@@ -65,6 +65,7 @@ class SocksServerHandler extends ChannelHandler<Uint8List> {
 
   @override
   Future<void> channelRead(ChannelContext channelContext, Channel channel, Uint8List msg) async {
+    logger.d('[SSL-DEBUG] SocksServerHandler.channelRead: state=$socksState dataLen=${msg.length}');
     int idx = 0;
     final int version = msg[idx++];
     if (version != Socks5.version) {
@@ -118,6 +119,8 @@ class SocksServerHandler extends ChannelHandler<Uint8List> {
       final int port = msg[idx++] << 8 | msg[idx++];
       final proxyInfo = ProxyInfo.of(host, port);
 
+      logger.d('[SSL-DEBUG] SocksServerHandler: CONNECT resolved host="$host" port=$port '
+        'atyp=$dstAddrType (1=IPv4, 3=Domain, 4=IPv6)');
       logger.d('[${channel.id}] Socks5 connect ${proxyInfo.host}:${proxyInfo.port}');
       channelContext.putAttribute(AttributeKeys.socks5Proxy, proxyInfo);
 

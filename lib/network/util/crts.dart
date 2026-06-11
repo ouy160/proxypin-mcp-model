@@ -74,14 +74,24 @@ class CertificateManager {
   static Future<SecurityContext> getCertificateContext(String host) async {
     SecurityContext? securityContext = _certificateMap[host];
     if (securityContext != null) {
+      logger.d('[SSL-DEBUG] getCertificateContext: hit cache for host="$host"');
       return securityContext;
     }
 
+    logger.d('[SSL-DEBUG] getCertificateContext: MISS cache for host="$host", state=$_state');
+
     if (_state != StartState.initialized) {
+      logger.d('[SSL-DEBUG] getCertificateContext: calling initCAConfig()');
       await initCAConfig();
+      logger.d('[SSL-DEBUG] getCertificateContext: initCAConfig() done, state=$_state');
     }
 
+    logger.d('[SSL-DEBUG] getCertificateContext: generating leaf cert for host="$host" '
+        'with CA subject="${_caCert?.subject}"');
+
     String cer = generate(_caCert!, _serverKeyPair.publicKey as RSAPublicKey, _caPriKey, host);
+
+    logger.d('[SSL-DEBUG] getCertificateContext: leaf cert PEM length=${cer.length} for host="$host"');
 
     var rsaPrivateKey = _serverKeyPair.privateKey as RSAPrivateKey;
 
@@ -91,6 +101,8 @@ class CertificateManager {
       ..usePrivateKeyBytes(CryptoUtils.encodeRSAPrivateKeyToPemPkcs1(rsaPrivateKey).codeUnits);
 
     _certificateMap[host] = securityContext;
+
+    logger.d('[SSL-DEBUG] getCertificateContext: cached SecurityContext for host="$host"');
 
     return securityContext;
   }
@@ -191,9 +203,11 @@ class CertificateManager {
 
   static Future<void> initCAConfig() async {
     if (_state == StartState.initialized || _state == StartState.initializing) {
+      logger.d('[SSL-DEBUG] initCAConfig: skip, state=$_state');
       return _initializationCompleter.future;
     }
 
+    logger.d('[SSL-DEBUG] initCAConfig: starting');
     var startTime = DateTime.now().millisecondsSinceEpoch;
 
     _state = StartState.initializing;
@@ -201,15 +215,22 @@ class CertificateManager {
 
     try {
       _serverKeyPair = CryptoUtils.generateRSAKeyPair();
+      logger.d('[SSL-DEBUG] initCAConfig: generated new server RSA key pair');
 
       //从项目目录加入ca根证书
       var caPemFile = await certificateFile();
+      logger.d('[SSL-DEBUG] initCAConfig: CA file path="${caPemFile.path}" exists=${await caPemFile.exists()} '
+          'size=${await caPemFile.exists() ? await caPemFile.length() : -1}');
       _caCert = X509Utils.x509CertificateFromPem(await caPemFile.readAsString());
+      logger.d('[SSL-DEBUG] initCAConfig: loaded CA cert subject="${_caCert?.subject}"');
       //根据CA证书subject来动态生成目标服务器证书的issuer和subject
 
       //从项目目录加入ca私钥
       var keyFile = await privateKeyFile();
+      logger.d('[SSL-DEBUG] initCAConfig: key file path="${keyFile.path}" exists=${await keyFile.exists()} '
+          'size=${await keyFile.exists() ? await keyFile.length() : -1}');
       _caPriKey = CryptoUtils.rsaPrivateKeyFromPem(await keyFile.readAsString());
+      logger.d('[SSL-DEBUG] initCAConfig: loaded CA private key bits=${_caPriKey.modulus?.bitLength}');
 
       _state = StartState.initialized;
       _initializationCompleter.complete();
