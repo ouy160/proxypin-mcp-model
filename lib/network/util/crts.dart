@@ -95,11 +95,13 @@ class CertificateManager {
 
     var rsaPrivateKey = _serverKeyPair.privateKey as RSAPrivateKey;
 
-    securityContext = SecurityContext(withTrustedRoots: true)
-      ..useCertificateChainBytes(cer.codeUnits)
-      ..allowLegacyUnsafeRenegotiation = true
-      ..usePrivateKeyBytes(CryptoUtils.encodeRSAPrivateKeyToPemPkcs1(rsaPrivateKey).codeUnits);
-
+    // 创建 SecurityContext 并在加载证书前设置 ALPN 支持
+    securityContext = SecurityContext(withTrustedRoots: true);
+    // 预注册常见的 ALPN 协议，BoringSSL 需要在证书加载前设置 ALPN
+    // 具体的 ALPN 协议列表稍后在 ssl() 中通过 secureServer 的 supportedProtocols 参数覆盖
+    securityContext.setAlpnProtocols(['http/1.1', 'h2'], true);
+    securityContext.useCertificateChainBytes(cer.codeUnits);
+    securityContext.usePrivateKeyBytes(CryptoUtils.encodeRSAPrivateKeyToPemPkcs1(rsaPrivateKey).codeUnits);
     _certificateMap[host] = securityContext;
 
     logger.d('[SSL-DEBUG] getCertificateContext: cached SecurityContext for host="$host"');

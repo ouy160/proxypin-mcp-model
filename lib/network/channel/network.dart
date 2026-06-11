@@ -290,6 +290,22 @@ class Server extends Network {
     } catch (error, trace) {
       logger.e('[SSL-DEBUG] ssl() EXCEPTION for ${hostAndPort?.host}: $error', error: error, stackTrace: trace);
       logger.e('[${channelContext.clientChannel?.id}] $hostAndPort ssl error', error: error, stackTrace: trace);
+
+      // fallback to relay if MITM handshake fails (e.g. TLS 1.3 extension incompatibility)
+      if (error is HandshakeException && hostAndPort != null) {
+        logger.d('[SSL-DEBUG] ssl() TLS MITM failed, falling back to relay for ${hostAndPort.host}');
+        try {
+          final fallbackChannel = channelContext.serverChannel ?? await channelContext.connectServerChannel(hostAndPort, RelayHandler(channel));
+          if (fallbackChannel != null) {
+            relay(channel, fallbackChannel);
+            channel.dispatcher.channelRead(channelContext, channel, data);
+            return;
+          }
+        } catch (fallbackError) {
+          logger.e('[SSL-DEBUG] ssl() relay fallback also failed: $fallbackError');
+        }
+      }
+
       try {
         channelContext.processInfo ??=
             await ProcessInfoUtils.getProcessByPort(channel.remoteSocketAddress, hostAndPort?.domain ?? 'unknown');
