@@ -186,10 +186,34 @@ class X509Utils {
 
     // Add Extensions
 
-    if (Lists.isNotEmpty(sans) || keyUsage != null || Lists.isNotEmpty(extKeyUsage)) {
+    // 计算叶子公钥的 SKI (Subject Key Identifier)
+    final Uint8List leafSki = computeSubjectKeyIdentifier(publicKey);
+
+    // 计算 CA 的 SKI (用于 AKI 扩展)
+    Uint8List? caSki;
+    try {
+      if (caRoot.tbsCertificateSeqAsString != null) {
+        final caTbs = base64Decode(caRoot.tbsCertificateSeqAsString!);
+        final caParser = ASN1Parser(caTbs);
+        final caTbsSeq = caParser.nextObject() as ASN1Sequence;
+        final spkiIndex = (caTbsSeq.elements!.elementAt(0) is! ASN1Integer) ? 6 : 5;
+        final caPubKeyInfo = caTbsSeq.elements!.elementAt(spkiIndex) as ASN1Sequence;
+        final caSubjectPublicKey = caPubKeyInfo.elements!.elementAt(1) as ASN1BitString;
+        final caSubjectPublicKeyBytes = caSubjectPublicKey.stringValues as Uint8List?;
+        if (caSubjectPublicKeyBytes != null && caSubjectPublicKeyBytes.isNotEmpty) {
+          caSki = CryptoUtils.getHashPlain(caSubjectPublicKeyBytes, algorithmName: 'SHA-1');
+        }
+      }
+    } catch (_) {
+      // caSki 留空
+    }
+
+    if (Lists.isNotEmpty(sans) ||
+        keyUsage != null ||
+        Lists.isNotEmpty(extKeyUsage) ||
+        caSki != null) {
       var extensionTopSequence = ASN1Sequence();
 
-      // Add basic constraints 2.5.29.19
       if (basicConstraints != null) {
         var basicConstraintsValue = ASN1Sequence();
         basicConstraintsValue.add(ASN1Boolean(basicConstraints.isCA));
@@ -206,12 +230,10 @@ class X509Utils {
         extensionTopSequence.add(basicConstraintsSequence);
       }
 
-      // Add key usage  2.5.29.15
       if (keyUsage != null) {
-        extensionTopSequence.add(keyUsageSequence(keyUsage)!);
+        extensionTopSequence.add(keyUsageSequence(keyUsage, critical: keyUsage.critical)!);
       }
 
-      //2.5.29.17
       if (sans != null && sans.isNotEmpty) {
         var sanList = ASN1Sequence();
         for (var s in sans) {
@@ -225,10 +247,29 @@ class X509Utils {
         extensionTopSequence.add(sanSequence);
       }
 
-      // Add ext key usage 2.5.29.37
       var extKeyUsageSequence = extendedKeyUsageEncodings(extKeyUsage);
       if (extKeyUsageSequence != null) {
         extensionTopSequence.add(extKeyUsageSequence);
+      }
+
+      // Add Subject Key Identifier (2.5.29.14)
+      // OpenSSL 用双层 OCTET STRING 包装: ext_value = OS(22) { OS(20) { 20 bytes } }
+      final skiInnerOs = ASN1OctetString(octets: leafSki);
+      final skiOuterOs = ASN1OctetString(octets: skiInnerOs.encode());
+      var skiSequence = ASN1Sequence();
+      skiSequence.add(Extension.subjectKeyIdentifier);
+      skiSequence.add(skiOuterOs);
+      extensionTopSequence.add(skiSequence);
+
+      // Add Authority Key Identifier (2.5.29.35)
+      if (caSki != null) {
+        final akiInner = ASN1Sequence();
+        akiInner.add(ASN1OctetString(octets: caSki, tag: 0x80));
+        final akiOuterValue = ASN1OctetString(octets: akiInner.encode());
+        var akiSequence = ASN1Sequence();
+        akiSequence.add(Extension.authorityKeyIdentifier);
+        akiSequence.add(akiOuterValue);
+        extensionTopSequence.add(akiSequence);
       }
 
       var extObj = ASN1Object(tag: 0xA3);
@@ -383,16 +424,47 @@ class X509Utils {
           var cRLDistributionPoints = _fetchCrlDistributionPoints(seq.elements!.elementAt(1));
           extensions.cRLDistributionPoints = cRLDistributionPoints;
         }
+        // Subject Key Identifier (2.5.29.14)
+        if (oi.objectIdentifierAsString == '2.5.29.14') {
+          final octetEl = seq.elements!.length == 3
+              ? seq.elements!.elementAt(2)
+              : seq.elements!.elementAt(1);
+          if (octetEl is ASN1OctetString) {
+            extensions.subjectKeyIdentifier = Uint8List.fromList(octetEl.octets!);
+          }
+        }
+        // Authority Key Identifier (2.5.29.35)
+        if (oi.objectIdentifierAsString == '2.5.29.35') {
+          final octetEl = seq.elements!.length == 3
+              ? seq.elements!.elementAt(2)
+              : seq.elements!.elementAt(1);
+          if (octetEl is ASN1OctetString && octetEl.octets != null) {
+            try {
+              final akiParser = ASN1Parser(octetEl.octets!);
+              final akiSeq = akiParser.nextObject() as ASN1Sequence;
+              if (akiSeq.elements!.isNotEmpty) {
+                final kidEl = akiSeq.elements!.elementAt(0);
+                if (kidEl is ASN1OctetString) {
+                  extensions.authorityKeyIdentifier = Uint8List.fromList(kidEl.octets!);
+                } else if (kidEl is ASN1Object && kidEl.valueBytes != null) {
+                  extensions.authorityKeyIdentifier = Uint8List.fromList(kidEl.valueBytes!);
+                }
+              }
+            } catch (_) {
+              // 解析失败保留 null
+            }
+          }
+        }
       }
     return extensions;
   }
 
-  static ASN1Sequence? keyUsageSequence(ExtensionKeyUsage keyUsages) {
+  static ASN1Sequence? keyUsageSequence(ExtensionKeyUsage keyUsages, {bool? critical}) {
     var octetString = ASN1OctetString(octets: keyUsages.bitString.encode());
 
     var keyUsageSequence = ASN1Sequence();
     keyUsageSequence.add(Extension.keyUsage);
-    if (keyUsages.critical) {
+    if (critical ?? keyUsages.critical) {
       keyUsageSequence.add(ASN1Boolean(true));
     }
     keyUsageSequence.add(octetString);
@@ -860,5 +932,18 @@ class X509Utils {
       default:
         return 'SHA-256';
     }
+  }
+
+  ///
+  /// 计算 SubjectPublicKey 的 SHA-1 摘要, 作为 SKI (Subject Key Identifier) 扩展值.
+  ///
+  /// 遵循 RFC 5280 §4.2.1.2 method (1): 对 SubjectPublicKey 的位串内容做 SHA-1.
+  ///
+  static Uint8List computeSubjectKeyIdentifier(RSAPublicKey publicKey) {
+    var publicKeySequence = ASN1Sequence();
+    publicKeySequence.add(ASN1Integer(publicKey.modulus));
+    publicKeySequence.add(ASN1Integer(publicKey.exponent));
+    final Uint8List subjectPublicKeyBits = publicKeySequence.encode();
+    return CryptoUtils.getHashPlain(subjectPublicKeyBits, algorithmName: 'SHA-1');
   }
 }
