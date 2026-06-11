@@ -256,6 +256,12 @@ git push origin mcp-main
 
 感谢原作者 [@wanghongenpin](https://github.com/wanghongenpin) 的出色工作。
 
+## MCP 项目来源
+
+本仓库 MCP Server 的实现基于 [SuxyEE/proxypin-mcp](https://github.com/SuxyEE/proxypin-mcp) 项目，在保留原版全部抓包能力的基础上，将 MCP Server 内置集成到 ProxyPin 主进程中。
+
+感谢 MCP 作者 [@SuxyEE](https://github.com/SuxyEE) 的开创性工作。
+
 ---
 
 ## License

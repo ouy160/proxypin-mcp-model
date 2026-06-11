@@ -169,6 +169,12 @@ git push origin mcp-main
 Original ProxyPin: [https://github.com/wanghongenpin/proxypin](https://github.com/wanghongenpin/proxypin)  
 Thanks to [@wanghongenpin](https://github.com/wanghongenpin) for the excellent original work.
 
+## MCP Project Origin
+
+The MCP Server implementation in this repository is based on [SuxyEE/proxypin-mcp](https://github.com/SuxyEE/proxypin-mcp), integrating the MCP Server directly into the ProxyPin process while preserving full capture capabilities.
+
+Thanks to [@SuxyEE](https://github.com/SuxyEE) for the pioneering work.
+
 ---
 
 ## License
