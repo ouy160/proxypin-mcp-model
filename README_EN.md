@@ -13,7 +13,7 @@
 
 ### Connection
 
-The MCP Server listens on port **9099** by default (SSE transport, no extra dependencies required).
+The MCP Server listens on port **9101** by default (SSE transport, no extra dependencies required).
 
 Configure in Claude Desktop / Cursor / Windsurf:
 
@@ -21,11 +21,33 @@ Configure in Claude Desktop / Cursor / Windsurf:
 {
   "mcpServers": {
     "proxypin": {
-      "url": "http://127.0.0.1:9099/sse"
+      "url": "http://127.0.0.1:9101/sse"
     }
   }
 }
 ```
+
+### Quick Debug: Raw JSON-RPC via `/message`
+
+For quick testing or scripts, send raw JSON-RPC directly to the `/message` endpoint. No MCP client needed — just `curl`:
+
+```bash
+# 1. Connect SSE to get a sessionId (separate terminal or background)
+curl -N http://127.0.0.1:9101/sse
+# → prints: event: endpoint\ndata: http://127.0.0.1:9101/message?sessionId=xxxxx
+
+# 2. Call any tool via POST /message?sessionId=xxxxx
+curl -X POST "http://127.0.0.1:9101/message?sessionId=xxxxx" \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","id":1,"method":"get_request_list","params":{}}'
+
+# 3. One-liner for stateless debugging (omit sessionId for fire-and-forget)
+curl -X POST http://127.0.0.1:9101/message \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","id":1,"method":"list_breakpoints","params":{}}'
+```
+
+**Tip**: The `/message` endpoint returns the JSON-RPC response directly in the HTTP body, so you can quickly inspect results without maintaining a persistent SSE connection. The `sessionId` is only needed if you want bi-directional SSE events (e.g. intercept notifications); for read-only tools (query, search, analysis), omitting it works fine.
 
 ---
 
@@ -97,6 +119,51 @@ AI → release_intercept requestId=xxx body='{"user":"admin","pass":"test"}'
 | `analyze_auth` | Extract Auth headers, API key headers, Cookie session tokens; auto-decode JWT payloads |
 | `extract_api_endpoints` | Group and normalize API paths (replace IDs/UUIDs with placeholders), count calls and status codes |
 
+## Known Issues
+
+### UI tearing when using Rewrite / Decrypt
+
+When request rewrite rules or request decryption are active, the UI may occasionally flicker or tear. This is caused by the large number of simultaneous state updates — the UI thread is shared with the capture engine. It does not affect capture data or rewrite correctness.
+
+### Occasional capture lag
+
+Under heavy traffic, the request list may briefly stutter when new requests arrive. This is most noticeable when thousands of requests are in the list. Workaround: use `clear_requests` (or the MCP `clear_requests` tool) periodically to keep the list manageable.
+
+---
+
+## Capturing Claude Desktop traffic
+
+Claude Desktop (and other Electron-based apps) use Node.js which has its own certificate store. There are two approaches to intercept their HTTPS traffic with ProxyPin:
+
+### 1. Certificate trust (NODE_EXTRA_CA_CERTS)
+
+1. Export the ProxyPin CA certificate (the app menu → HTTPS → Export Root Certificate → PEM)
+2. Set the `NODE_EXTRA_CA_CERTS` environment variable before launching Claude:
+
+```cmd
+set NODE_EXTRA_CA_CERTS=C:\Users\1\Desktop\ProxyPinCA.pem
+claude-desktop
+```
+
+Or set it system-wide (persistent):
+
+```cmd
+setx NODE_EXTRA_CA_CERTS C:\Users\1\Desktop\ProxyPinCA.pem
+```
+
+Then restart Claude Desktop. All HTTPS requests from Claude will now be captured by ProxyPin.
+
+### 2. ProxyRule + ProxyBridge
+
+For more control (selective routing, no certificate store modification), use ProxyRule + ProxyBridge together:
+
+- **ProxyRule** — defines which requests to intercept (by domain, process, or URL pattern)
+- **ProxyBridge** — a companion tool that bridges Claude's traffic through ProxyPin's proxy without needing Node.js certificate changes
+
+Configure ProxyBridge to forward traffic through `127.0.0.1:9099` (ProxyPin's default proxy port), and set up a ProxyRule targeting `api.anthropic.com` (or `*` for all traffic). See the ProxyBridge documentation for setup details.
+
+> **Note**: Claude's MCP client connections are not routed through the OS proxy by default — configure the MCP server URL in Claude's `claude_desktop_config.json` instead (see [Connection](#connection) above).
+
 ---
 
 ## Automated Build & Release
@@ -113,8 +180,8 @@ GitHub Actions handles multi-platform builds with no local Flutter environment n
 ### Release a new version
 
 ```bash
-git tag v1.2.7
-git push origin v1.2.7
+git tag v1.2.8
+git push origin v1.2.8
 # GitHub Actions builds and creates the Release automatically (~15-25 min)
 ```
 
