@@ -262,9 +262,12 @@ class X509Utils {
       extensionTopSequence.add(skiSequence);
 
       // Add Authority Key Identifier (2.5.29.35)
-      if (caSki != null) {
+      // 自签名 CA (basicConstraints.isCA): AKI 使用自己的 SKI (leafSki)
+      // 叶子证书 (CA 签发) : AKI 使用 CA 的 SKI (caSki)
+      final Uint8List? akiValue = basicConstraints?.isCA == true ? leafSki : caSki;
+      if (akiValue != null) {
         final akiInner = ASN1Sequence();
-        akiInner.add(ASN1OctetString(octets: caSki, tag: 0x80));
+        akiInner.add(ASN1OctetString(octets: akiValue, tag: 0x80));
         final akiOuterValue = ASN1OctetString(octets: akiInner.encode());
         var akiSequence = ASN1Sequence();
         akiSequence.add(Extension.authorityKeyIdentifier);

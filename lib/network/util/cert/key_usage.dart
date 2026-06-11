@@ -66,17 +66,25 @@ class ExtensionKeyUsage {
     }
     if (value <= 0xFF) {
       // 1 字节 content
-      final int usedBits = _highestBit(value) + 1; // 1-8
-      final int unusedBits = 8 - usedBits; // 0-7
+      // BIT STRING 是 MSB-first: value 中最低的 set bit (LSB视角) 对应 BIT STRING 中最高的 MSB position.
+      // 需要用 usedBits 覆盖所有 set bit 的 MSB 范围.
+      //   digitalSignature=0x80=10000000: lowestBit=7 → usedBits=7-7+1=1  → unusedBits=7
+      //   keyCertSign=0x04=00000100:     lowestBit=2 → usedBits=7-2+1=6  → unusedBits=2
+      //   digitalSignature|keyEncipherment=0xA0=10100000: lowestBit=5 → usedBits=7-5+1=3 → unusedBits=5
+      final int lowestBit = _lowestBit(value);
+      final int usedBits = 7 - lowestBit + 1; // BIT STRING MSB 位置范围
+      final int unusedBits = 8 - usedBits;
       return Uint8List.fromList(<int>[0x03, 0x02, unusedBits, value & 0xFF]);
     }
     // 2 字节 content
     return Uint8List.fromList(<int>[0x03, 0x03, 0x00, (value >> 8) & 0xFF, value & 0xFF]);
   }
 
-  static int _highestBit(int v) {
+  /// 返回 v 中最低有效 set bit 的 LSB 位置 (0-indexed).
+  /// 例如 _lowestBit(0x04)=2, _lowestBit(0xA0)=5, _lowestBit(0x80)=7.
+  static int _lowestBit(int v) {
     int b = 0;
-    while ((v >> (b + 1)) != 0) {
+    while ((v & (1 << b)) == 0) {
       b++;
     }
     return b;
