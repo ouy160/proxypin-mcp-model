@@ -129,6 +129,33 @@ class TLS {
 // Ignore errors, just return null
     }
 
-    return null;
+  }
+
+  ///检测 ClientHello 是否包含 post_handshake_auth (0x0031)扩展
+  ///该扩展在 urllib3 等 Python 库中发送，与 Flutter BoringSSL
+  ///server 端不兼容，需跳过 MITM 直接 relay
+  static bool hasPostHandshakeAuth(Uint8List data) {
+    try {
+      int sessionLength = data[43];
+      int pos = 44 + sessionLength;
+      if (data.length < pos + 2) return false;
+      int cipherSuitesLength = data.buffer.asByteData().getUint16(pos);
+      pos += 2 + cipherSuitesLength;
+      if (data.length < pos + 1) return false;
+      int compressionMethodsLength = data[pos];
+      pos += 1 + compressionMethodsLength;
+      if (data.length < pos + 2) return false;
+      int extensionsLength = data.buffer.asByteData().getUint16(pos);
+      pos += 2;
+      if (data.length < pos + extensionsLength) return false;
+      int end = pos + extensionsLength;
+      while (pos + 4 <= end) {
+        int extensionType = data.buffer.asByteData().getUint16(pos);
+        int extensionLength = data.buffer.asByteData().getUint16(pos + 2);
+        if (extensionType == 0x0031) return true;
+        pos += 4 + extensionLength;
+      }
+    } catch (_) {}
+    return false;
   }
 }

@@ -234,9 +234,10 @@ class Server extends Network {
         'remoteChannel=${remoteChannel != null ? "exists isSsl=${remoteChannel.isSsl}" : "null"} '
         'isHttp=$isHttp enableSsl=${configuration.enableSsl} '
         'inHostFilter=${HostFilter.filter(hostAndPort.host)}');
-
-      if (!isHttp || HostFilter.filter(hostAndPort.host) || !configuration.enableSsl) {
-        logger.d('[SSL-DEBUG] ssl() skip MITM: isHttp=$isHttp inHostFilter=${HostFilter.filter(hostAndPort.host)} enableSsl=${configuration.enableSsl}, using relay');
+      final hasPostAuth = !configuration.enableSsl ? false : TLS.hasPostHandshakeAuth(data);
+      if (!isHttp || HostFilter.filter(hostAndPort.host) || !configuration.enableSsl || hasPostAuth) {
+        logger.d('[SSL-DEBUG] ssl() skip MITM: isHttp=$isHttp inHostFilter=${HostFilter.filter(hostAndPort.host)} '
+          'enableSsl=${configuration.enableSsl} hasPostAuth=$hasPostAuth, using relay');
         remoteChannel = remoteChannel ?? await channelContext.connectServerChannel(hostAndPort, RelayHandler(channel));
         relay(channel, remoteChannel);
         channel.dispatcher.channelRead(channelContext, channel, data);
