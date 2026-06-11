@@ -151,6 +151,16 @@ class X509CertificateDataExtensions {
   /// The distribution points for the crl files. Normally a url.
   List<String>? cRLDistributionPoints;
 
+  /// Authority Key Identifier (RFC 5280 §4.2.1.1) — 2.5.29.35
+  /// AKI 的 keyIdentifier 字段值, SHA-1 摘要的字节形式 (20 字节).
+  /// null 表示证书不包含 AKI 扩展.
+  Uint8List? authorityKeyIdentifier;
+
+  /// Subject Key Identifier (RFC 5280 §4.2.1.2) — 2.5.29.14
+  /// SKI 扩展值, SHA-1 摘要的字节形式 (20 字节).
+  /// null 表示证书不包含 SKI 扩展.
+  Uint8List? subjectKeyIdentifier;
+
   X509CertificateDataExtensions({
     this.subjectAlternativNames,
     this.extKeyUsage,
@@ -159,6 +169,8 @@ class X509CertificateDataExtensions {
     this.pathLenConstraint,
     this.vmc,
     this.cRLDistributionPoints,
+    this.authorityKeyIdentifier,
+    this.subjectKeyIdentifier,
   });
 }
 

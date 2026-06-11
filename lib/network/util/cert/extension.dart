@@ -14,6 +14,12 @@ class Extension {
   /// Extended Key Usage
   static final ASN1ObjectIdentifier extendedKeyUsage = ASN1ObjectIdentifier.fromIdentifierString("2.5.29.37");
 
+  /// Subject Key Identifier (RFC 5280 §4.2.1.2) — 2.5.29.14
+  static final ASN1ObjectIdentifier subjectKeyIdentifier = ASN1ObjectIdentifier.fromIdentifierString("2.5.29.14");
+
+  /// Authority Key Identifier (RFC 5280 §4.2.1.1) — 2.5.29.35
+  static final ASN1ObjectIdentifier authorityKeyIdentifier = ASN1ObjectIdentifier.fromIdentifierString("2.5.29.35");
+
   final ASN1ObjectIdentifier extnId;
   final bool critical;
 
