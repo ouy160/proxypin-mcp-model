@@ -1,21 +1,106 @@
 # ProxyPin MCP
 
-English | [中文](README_CN.md)
+[English](README_EN.md) | 中文
 
-> **This repo is an MCP-enhanced fork of [ProxyPin](https://github.com/wanghongenpin/proxypin).**  
-> It ships a built-in **MCP Server (Model Context Protocol)** on top of the full original feature set, letting AI clients (Claude, Cursor, Windsurf, etc.) connect directly to the running proxy, read capture data, and actively control interception and modification—no extra service or Python script needed.
+> **本仓库是 [ProxyPin](https://github.com/wanghongenpin/proxypin) 的 MCP 增强版**，在保留原版全部抓包功能的基础上，内置了完整的 **MCP Server（Model Context Protocol）**，让 AI（Claude、Cursor、Windsurf 等）能够直接连接、读取、操控抓包数据，实现自动化流量分析、改包测试和安全审计。
 
 ---
 
-## MCP Features
+## 🚨 BREAKING CHANGES - 近期破坏性变更
 
-> **TL;DR**: Open ProxyPin, and AI can see every request you capture, help you analyze it, modify it, and release it—like Fiddler breakpoints, but controlled by AI.
+### 2026-06-11：MITM 证书链重构
 
-### Connection
+本次更新修复了 OpenSSL `v3_purp.c:637` 证书验证失败的根因问题，涉及以下破坏性变更：
 
-The MCP Server listens on port **9099** by default (SSE transport, no extra dependencies required).
+#### 1. SKI（Subject Key Identifier）编码方式变更
 
-Configure in Claude Desktop / Cursor / Windsurf:
+**影响范围**：所有由 ProxyPin 生成的 MITM 叶子证书。
+
+| 项目 | 旧版 | 新版 |
+|------|------|------|
+| ASN.1 结构 | `04 14 <20byte>`（单层 OCTET STRING） | `04 16 04 14 <20byte>`（双层 OCTET STRING） |
+| OpenSSL 兼容性 | ❌ `ossl_x509v3_cache_extensions` 解析失败 | ✅ 完全兼容 |
+
+**影响**：更新后新生成的叶子证书 SKI 字段为双层 OCTET STRING 编码，与 RFC 5280 标准一致。旧证书不受影响。如果你的系统硬编码了 SKI 字段的 ASN.1 结构，需要相应调整。
+
+#### 2. KeyUsage 常量顺序修正
+
+**影响范围**：KeyUsage 扩展的 BIT STRING 编码。
+
+| 常量 | 旧值（错误） | 新值（RFC 5280 修正） |
+|------|------------|-------------------|
+| `digitalSignature` | `0x01` | `0x80` |
+| `nonRepudiation` | `0x02` | `0x40` |
+| `keyEncipherment` | `0x04` | `0x20` |
+| `dataEncipherment` | `0x08` | `0x10` |
+| `keyAgreement` | `0x10` | `0x08` |
+| `keyCertSign` | `0x20` | `0x04` |
+| `cRLSign` | `0x40` | `0x02` |
+| `encipherOnly` | `0x80` | `0x01` |
+
+**影响**：使用自定义 KeyUsage 配置的策略需要更新常量值。默认生成的 MITM 证书自动使用修正后的值，无需手动调整。
+
+#### 3. KeyUsage unusedBits 动态计算
+
+**影响范围**：KeyUsage 扩展编码。
+
+`keyUsageBytes` 改用 `_lowestBit`（最低有效位）计算 `unusedBits`，替代之前的硬编码值。新公式：`unusedBits = 7 - _lowestBit(value) + 1`，保证编码正确性。
+
+#### 4. 自签名 CA 证书 AKI（Authority Key Identifier）修正
+
+**影响范围**：CA 自签名证书。
+
+自签名 CA 证书的 AKI 现在使用**自己的 SKI**（而不是叶子证书的 SKI），确保 `openssl verify -CAfile ca.crt ca.crt` 验证通过。
+
+#### 5. generateNewRootCA 自动刷新配置
+
+**影响范围**：重新生成根证书后的行为。
+
+重新生成根证书后自动调用 `initCAConfig()` 刷新 UI 和运行时配置，不再需要手动重启应用。
+
+#### 6. post_handshake_auth 扩展处理移除
+
+**影响范围**：TLS MITM 握手流程。
+
+移除了对 `post_handshake_auth` TLS 扩展的特殊跳过逻辑。此前因该扩展导致的 MITM 跳过行为已修复，现在此类连接正常执行 MITM 拦截。
+
+#### 升级指南
+
+1. 更新应用后，建议重新生成一次根证书（设置 → 证书管理 → 重新生成）
+2. 重新安装新根证书到系统信任存储
+3. 旧抓包数据不受影响
+
+---
+
+## 更新日志
+
+### [1.2.9] - 2026-06-11
+
+#### 修复
+
+- **OpenSSL 证书验证修复**：修复 `v3_purp.c:637` 证书校验失败导致的 TLS 握手异常。根因：SKI 编码缺少双层 OCTET STRING 封装。[#T-08]
+- **KeyUsage 编码修正**：BIT STRING 常量改为 RFC 5280 的 MSB-first 顺序（`digitalSignature=0x80`），修复 `keyCertSign` 被错误解析的问题。[#T-08]
+- **CA 自签名 AKI 修正**：自签名 CA 证书使用自己的 SKI 作为 AKI，通过 `openssl verify` 自验证。[#T-07]
+- **generateNewRootCA 刷新 CA 配置**：重新生成根证书后立即刷新运行时配置和 UI 显示。[#T-08]
+- **移除 post_handshake_auth 跳过逻辑**：连接不再因该 TLS 扩展被跳过 MITM 拦截。[#T-05]
+- **SSL 调试日志**：在 MITM 握手关键路径添加调试日志，便于排查 TLS 问题。[#T-05]
+
+#### 变更
+
+- **KeyUsage unusedBits 动态计算**：`keyUsageBytes` 改用 `_lowestBit` 算法，正确计算 BIT STRING 的未使用位数。[#T-08]
+- **测试文件清理**：移除仓库中的调试测试文件和测试 API 脚本。
+
+---
+
+## MCP 核心功能
+
+> **一句话**：打开 ProxyPin，AI 就能看到你在抓什么包，并且能帮你分析、改包、放行——就像 Fiddler 断点，但由 AI 控制。
+
+### 连接方式
+
+ProxyPin MCP Server 默认监听 **9099** 端口，SSE 传输协议，无需额外安装任何依赖。
+
+在 Claude Desktop / Cursor 等 AI 工具中配置：
 
 ```json
 {
@@ -29,132 +114,133 @@ Configure in Claude Desktop / Cursor / Windsurf:
 
 ---
 
-### Available MCP Tools (27 total)
+### 已实现的 MCP 工具（27 个）
 
-#### 1. Basic Capture Query (9 tools)
+#### 一、基础抓包查询（9 个）
 
-| Tool | Description |
-|------|-------------|
-| `get_request_list` | List captured requests with filters: domain, method, status code, keyword, pagination |
-| `get_request_detail` | Full details of a single request: headers, body, response, timing |
-| `get_request_body` | Fetch large request/response body content directly |
-| `get_request_stats` | Summary stats: domain distribution, status codes, methods, avg latency |
-| `search_requests` | Advanced search: URL/Body/Header keyword + time range |
-| `get_domain_summary` | Group by domain: unique paths, method distribution, avg latency |
-| `get_cookie_info` | Extract Cookie/Set-Cookie headers and analyze attributes |
-| `compare_requests` | Diff two requests: URL, Headers, Query params, Body, Status code |
-| `analyze_encrypted_content` | Detect Base64/Hex/URL-encoded/JWT content, compute entropy, hint at algorithm |
+| 工具 | 说明 |
+|------|------|
+| `get_request_list` | 获取请求列表，支持按域名/方法/状态码/关键词过滤、分页 |
+| `get_request_detail` | 获取单条请求完整详情（请求头、请求体、响应头、响应体、耗时） |
+| `get_request_body` | 单独获取大体积请求体或响应体原始内容 |
+| `get_request_stats` | 统计摘要：域名分布、状态码分布、方法分布、平均耗时 |
+| `search_requests` | 高级搜索：URL/Body/Header 关键词 + 时间范围多条件组合 |
+| `get_domain_summary` | 按域名分组汇总：路径列表、方法分布、平均耗时 |
+| `get_cookie_info` | 提取分析指定域名的 Cookie/Set-Cookie 及属性 |
+| `compare_requests` | 对比两条请求的 URL/Header/Body/状态码差异 |
+| `analyze_encrypted_content` | 检测 Base64/Hex/URL编码/JWT，计算信息熵，推测加密算法 |
 
-#### 2. Replay & Code Generation (2 tools)
+#### 二、请求重放与代码生成（2 个）
 
-| Tool | Description |
-|------|-------------|
-| `replay_request` | Replay a captured request with optional header/body overrides; returns the live response |
-| `generate_code` | Convert a captured request to runnable code: Python / JavaScript / cURL / Go |
+| 工具 | 说明 |
+|------|------|
+| `replay_request` | 重放指定请求，可临时覆盖 Headers/Body，返回真实响应（改包测试） |
+| `generate_code` | 将抓包请求转成 Python / JavaScript / cURL / Go 可执行代码 |
 
-#### 3. Breakpoint Interception · Modify & Release (5 tools, highlight)
+#### 三、断点拦截·改包放行（5 个，核心）
 
-> Fiddler-style breakpoints, but controlled by AI conversation.
+> 类似 Fiddler 的断点功能，但由 AI 控制修改后放行。
 
-| Tool | Description |
-|------|-------------|
-| `add_breakpoint` | Add a breakpoint rule (URL regex + HTTP method + request/response phase) |
-| `list_breakpoints` | List all rules and their enabled state |
-| `remove_breakpoint` | Remove a rule by index |
-| `get_pending_intercepts` | View all currently paused requests/responses with full data |
-| `release_intercept` | Release an intercept with optional modifications: Headers, Body, StatusCode, or abort |
+| 工具 | 说明 |
+|------|------|
+| `add_breakpoint` | 添加断点规则（URL 正则 + HTTP 方法 + 拦截请求或响应阶段） |
+| `list_breakpoints` | 列出所有断点规则及启用状态 |
+| `remove_breakpoint` | 删除指定断点规则 |
+| `get_pending_intercepts` | 查看当前被暂停等待放行的请求/响应（含完整数据） |
+| `release_intercept` | 放行拦截的请求/响应，可修改 Headers、Body、StatusCode，或直接中止 |
 
-**Typical workflow:**
+**典型用法：**
 ```
-AI → add_breakpoint url=".*api/login.*"
-   Trigger login in the App
-AI → get_pending_intercepts        ← reads the full intercepted request
-AI → release_intercept requestId=xxx body='{"user":"admin","pass":"test"}'
-   The modified request is forwarded to the server
+AI: add_breakpoint url=".*api/login.*"
+→ 触发 App 登录
+→ AI: get_pending_intercepts  ← 读到被拦截的完整请求
+→ AI: release_intercept requestId=xxx body='{"user":"admin","pass":"123456"}'  ← 改包放行
 ```
 
-#### 4. Rewrite Rule Management (3 tools)
+#### 四、重写规则管理（3 个）
 
-| Tool | Description |
-|------|-------------|
-| `list_rewrite_rules` | List all persistent rewrite rules |
-| `add_rewrite_rule` | Add a rule: replace body/headers, update params, redirect (5 types) |
-| `remove_rewrite_rule` | Remove a rule by index |
+| 工具 | 说明 |
+|------|------|
+| `list_rewrite_rules` | 列出所有持久化重写规则 |
+| `add_rewrite_rule` | 添加规则：替换响应/请求体、修改 Header、重定向（5 种类型） |
+| `remove_rewrite_rule` | 删除指定规则 |
 
-#### 5. JS Script Management (3 tools)
+#### 五、JS 脚本管理（3 个）
 
-| Tool | Description |
-|------|-------------|
-| `list_scripts` | List all JS intercept scripts |
-| `get_script_content` | Read script source code |
-| `create_or_update_script` | AI writes/updates a JS script with `onRequest`/`onResponse`; takes effect immediately |
+| 工具 | 说明 |
+|------|------|
+| `list_scripts` | 列出所有 JS 拦截脚本 |
+| `get_script_content` | 读取脚本代码 |
+| `create_or_update_script` | AI 直接编写/修改 JS 脚本（含 `onRequest`/`onResponse`），持久生效 |
 
-#### 6. Security Analysis (3 tools)
+#### 六、安全分析（3 个）
 
-| Tool | Description |
-|------|-------------|
-| `find_sensitive_data` | Scan for phone numbers, ID cards, emails, JWT, Bearer tokens, API keys, passwords, private IPs |
-| `analyze_auth` | Extract Auth headers, API key headers, Cookie session tokens; auto-decode JWT payloads |
-| `extract_api_endpoints` | Group and normalize API paths (replace IDs/UUIDs with placeholders), count calls and status codes |
+| 工具 | 说明 |
+|------|------|
+| `find_sensitive_data` | 扫描手机号/身份证/邮箱/JWT/Bearer Token/API Key/密码字段/内网 IP |
+| `analyze_auth` | 提取所有 Auth Header、API Key、Cookie Session Token，自动解析 JWT Payload |
+| `extract_api_endpoints` | 路径归组（数字/UUID 替换占位符），统计调用频次和状态码分布 |
 
 ---
 
-## Automated Build & Release
+## 自动化构建与发布
 
-GitHub Actions handles multi-platform builds with no local Flutter environment needed.
+本仓库使用 GitHub Actions 实现多平台自动构建，无需本地配置 Flutter 编译环境。
 
-### Workflows
+### 工作流说明
 
-| File | Trigger | Output |
-|------|---------|--------|
-| `windows-build.yml` | Push to `mcp-main` / manual | Windows zip (CI validation) |
-| `release.yml` | `v*` tag push / manual | Windows zip + Setup.exe + Android APK → GitHub Release |
+| 工作流文件 | 触发条件 | 产物 |
+|-----------|---------|------|
+| `windows-build.yml` | `mcp-main` 分支推送 / 手动触发 | Windows zip（CI 验证） |
+| `release.yml` | `v*` tag 推送 / 手动触发 | Windows zip + Setup.exe + Android APK → GitHub Release |
 
-### Release a new version
+### 发布新版本
 
 ```bash
 git tag v1.2.7
 git push origin v1.2.7
-# GitHub Actions builds and creates the Release automatically (~15-25 min)
+# GitHub Actions 自动构建并创建 Release，约 15-25 分钟
 ```
 
-### Release Artifacts
+### Release 产物
 
-- `proxypin-mcp-windows-{ver}.zip` — extract and run
-- `proxypin-mcp-windows-{ver}-setup.exe` — Inno Setup installer (EN/ZH)
-- `proxypin-mcp-android-{ver}.apk` — Android APK (release-signed if secrets configured, otherwise debug-signed)
+- `proxypin-mcp-windows-{ver}.zip` — 直接解压运行
+- `proxypin-mcp-windows-{ver}-setup.exe` — Inno Setup 安装包（支持中英双语）
+- `proxypin-mcp-android-{ver}.apk` — Android APK（Release 签名 / Debug 签名）
 
-### Android Signing (optional)
+### Android 签名配置（可选）
 
-Set these Secrets in GitHub → Settings → Secrets → Actions to enable release signing:
+在 GitHub → Settings → Secrets → Actions 中配置以下 Secret，构建将自动切换为 Release 签名：
 
-| Secret | Description |
-|--------|-------------|
-| `ANDROID_KEYSTORE_BASE64` | Output of `base64 -w 0 your.keystore` |
+| Secret | 说明 |
+|--------|------|
+| `ANDROID_KEYSTORE_BASE64` | `base64 -w 0 your.keystore` 的输出 |
 | `ANDROID_STORE_PASSWORD` | storePassword |
 | `ANDROID_KEY_ALIAS` | keyAlias |
 | `ANDROID_KEY_PASSWORD` | keyPassword |
 
-Without these secrets, the build automatically falls back to debug signing (sideloadable, not Play Store ready).
+---
+
+## ProxyPin 原版核心特性
+
+本仓库完整保留原版所有能力：
+
+- **全平台支持**：Windows、Mac、Android、iOS、Linux
+- **手机扫码连接**：无需手动配置 Wifi 代理
+- **域名过滤**：精准拦截目标流量
+- **请求搜索**：关键词、响应类型多维搜索
+- **JS 脚本**：编写脚本动态处理请求/响应
+- **请求重写**：重定向、替换报文、修改参数
+- **请求映射**：本地文件/脚本替代远程响应
+- **请求解密**：AES 密钥自动解密消息体
+- **请求屏蔽**：URL 规则屏蔽请求
+- **历史记录**：自动保存流量，支持 HAR 导出/导入
 
 ---
 
-## Original ProxyPin Features (fully preserved)
+## 与上游同步
 
-- **All platforms**: Windows, Mac, Android, iOS, Linux
-- **QR code device pairing**: connect phones without manual Wi-Fi proxy config
-- **Domain filtering**: intercept only the traffic you need
-- **Request search**: keyword, content-type, multi-condition search
-- **JavaScript scripts**: dynamic request/response manipulation
-- **Request rewrite**: redirect, replace body, modify headers/params
-- **Request mapping**: respond with local files/scripts instead of remote server
-- **Request decryption**: AES key auto-decrypts message bodies
-- **Request blocking**: block requests by URL pattern
-- **History**: auto-save capture data; HAR import/export
-
----
-
-## Staying in sync with upstream
+本仓库通过 `upstream` remote 追踪原作者更新：
 
 ```bash
 git fetch upstream
@@ -164,13 +250,14 @@ git push origin mcp-main
 
 ---
 
-## Upstream
+## 上游项目
 
-Original ProxyPin: [https://github.com/wanghongenpin/proxypin](https://github.com/wanghongenpin/proxypin)  
-Thanks to [@wanghongenpin](https://github.com/wanghongenpin) for the excellent original work.
+原版 ProxyPin：[https://github.com/wanghongenpin/proxypin](https://github.com/wanghongenpin/proxypin)
+
+感谢原作者 [@wanghongenpin](https://github.com/wanghongenpin) 的出色工作。
 
 ---
 
 ## License
 
-Apache License 2.0, same as the upstream project.
+Apache License 2.0，与上游保持一致。
