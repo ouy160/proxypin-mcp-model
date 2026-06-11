@@ -64,7 +64,17 @@ class SseChannelHandler extends ChannelHandler<Uint8List> {
 
       // Try to decompress - if it fails (incomplete data), keep accumulating
       _tryDecompress(channelContext, channel);
-      return;
+    }
+
+    // Update message body with decoded content for text display
+    if (message is HttpResponse) {
+      if (message.body == null) {
+        message.body = dataToDecode.toList();
+      } else {
+        List<int> existing = List<int>.from(message.body!);
+        existing.addAll(dataToDecode);
+        message.body = existing;
+      }
     }
 
     // For non-brotli, decode SSE messages directly
