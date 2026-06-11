@@ -15,8 +15,10 @@
  */
 
 import 'dart:collection';
+import 'dart:convert';
 
 import 'package:date_format/date_format.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:proxypin/l10n/app_localizations.dart';
@@ -27,8 +29,11 @@ import 'package:proxypin/network/components/host_filter.dart';
 import 'package:proxypin/network/channel/host_port.dart';
 import 'package:proxypin/network/http/http.dart';
 import 'package:proxypin/network/http/http_client.dart';
+import 'package:proxypin/ui/component/multi_select_controller.dart';
 import 'package:proxypin/ui/component/widgets.dart';
 import 'package:proxypin/ui/mobile/request/request_sequence.dart';
+import 'package:proxypin/utils/har.dart';
+import 'package:proxypin/utils/lang.dart';
 import 'package:proxypin/utils/listenable_list.dart';
 
 ///域名列表
@@ -120,7 +125,7 @@ class DomainListState extends State<DomainList> with AutomaticKeepAliveClientMix
     }
   }
 
-  clean() {
+  void clean() {
     setState(() {
       view.clear();
       domainList.clear();
@@ -130,10 +135,10 @@ class DomainListState extends State<DomainList> with AutomaticKeepAliveClientMix
     });
   }
 
-  remove(List<HttpRequest> list) {
+  void remove(List<HttpRequest> list) {
     for (var request in list) {
       containerMap[request.hostAndPort]?.remove(request);
-      if (containerMap[request.hostAndPort]!.isEmpty) {
+      if (containerMap[request.hostAndPort]?.isEmpty ?? false) {
         domainList.remove(request.hostAndPort);
         view.remove(request.hostAndPort);
       }
@@ -234,22 +239,27 @@ class DomainListState extends State<DomainList> with AutomaticKeepAliveClientMix
             return Scaffold(
                 appBar: AppBar(title: Text(view.elementAt(index).domain, style: const TextStyle(fontSize: 16))),
                 body: RequestSequence(
-                    key: requestSequenceKey,
-                    displayDomain: false,
-                    container: ListenableList(sortDesc ? list : list?.reversed.toList()),
-                    sortDesc: sortDesc,
-                    onRemove: widget.onRemove,
-                    proxyServer: widget.proxyServer));
+                  key: requestSequenceKey,
+                  displayDomain: false,
+                  container: ListenableList(sortDesc ? list : list?.reversed.toList()),
+                  sortDesc: sortDesc,
+                  onRemove: (requests) {
+                    widget.onRemove?.call(requests);
+                    remove(requests);
+                  },
+                  proxyServer: widget.proxyServer,
+                  selectionController: MultiSelectController(),
+                ));
           }));
         });
   }
 
-  scrollToTop() {
+  void scrollToTop() {
     _scrollController.animateTo(0, duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
   }
 
   ///菜单
-  menu(int index) {
+  void menu(int index) {
     var hostAndPort = view.elementAt(index);
 
     showModalBottomSheet(
@@ -295,6 +305,12 @@ class DomainListState extends State<DomainList> with AutomaticKeepAliveClientMix
                   text: localizations.repeatDomainRequests,
                   onPressed: () {
                     repeatDomainRequests(hostAndPort);
+                  }),
+              const Divider(thickness: 0.5, height: 5),
+              BottomSheetItem(
+                  text: localizations.exportDomainHar,
+                  onPressed: () {
+                    exportDomainHar(hostAndPort);
                   }),
               const Divider(thickness: 0.5, height: 5),
               BottomSheetItem(
@@ -344,5 +360,33 @@ class DomainListState extends State<DomainList> with AutomaticKeepAliveClientMix
         if (mounted) FlutterToastr.show('${localizations.fail}$e', rootNavigator: true, context);
       }
     }
+  }
+
+  Future<void> exportDomainHar(HostAndPort hostAndPort) async {
+    var requests = containerMap[hostAndPort] ?? [];
+    if (requests.isEmpty) {
+      if (mounted) FlutterToastr.show(localizations.emptyData, context);
+      return;
+    }
+
+    var fileName = _domainHarFileName(hostAndPort);
+    var json = await Har.writeJson(requests, title: fileName);
+    var bytes = utf8.encode(json);
+
+    var path = await FilePicker.platform.saveFile(fileName: fileName, bytes: bytes);
+    if (path == null) {
+      return;
+    }
+
+    if (mounted) FlutterToastr.show(localizations.exportSuccess, context);
+  }
+
+  String _domainHarFileName(HostAndPort hostAndPort) {
+    var suffix = (hostAndPort.port == 80 || hostAndPort.port == 443) ? '' : '_${hostAndPort.port}';
+    var safeDomain = '${hostAndPort.host}$suffix'.replaceAll(RegExp(r'[^A-Za-z0-9._-]'), '_');
+    if (safeDomain.isEmpty) {
+      safeDomain = 'domain';
+    }
+    return 'ProxyPin_${safeDomain}_${DateTime.now().dateFormat()}.har';
   }
 }

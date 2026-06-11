@@ -26,6 +26,7 @@ import 'package:proxypin/network/channel/channel.dart';
 import 'package:proxypin/network/channel/channel_context.dart';
 import 'package:proxypin/network/http/http.dart';
 import 'package:proxypin/network/http/websocket.dart';
+import 'package:proxypin/storage/histories.dart';
 import 'package:proxypin/ui/component/memory_cleanup.dart';
 import 'package:proxypin/ui/component/widgets.dart';
 import 'package:proxypin/ui/configuration.dart';
@@ -65,6 +66,7 @@ class _DesktopHomePagePageState extends State<DesktopHomePage> implements EventL
   static final GlobalKey<DesktopRequestListState> requestListStateKey = GlobalKey<DesktopRequestListState>();
 
   final ValueNotifier<int> _selectIndex = ValueNotifier(0);
+  StreamSubscription<HistoryItem>? _remoteHistorySubscription;
 
   late ProxyServer proxyServer = ProxyServer(widget.configuration);
   late NetworkTabController panel;
@@ -77,6 +79,11 @@ class _DesktopHomePagePageState extends State<DesktopHomePage> implements EventL
   @override
   void onRequest(Channel channel, HttpRequest request) {
     requestListStateKey.currentState!.add(channel, request);
+
+    if (request.attributes['quickShare'] == true) {
+      _selectIndex.value = 0;
+      panel.change(request, request.response);
+    }
 
     //监控内存 到达阈值清理
     MemoryCleanupMonitor.onMonitor(onCleanup: () {
@@ -101,6 +108,11 @@ class _DesktopHomePagePageState extends State<DesktopHomePage> implements EventL
     super.initState();
     proxyServer.addListener(this);
     panel = NetworkTabController(tabStyle: const TextStyle(fontSize: 16), proxyServer: proxyServer);
+    _remoteHistorySubscription = HistoryStorage.onRemoteImported.listen((_) {
+      if (mounted) {
+        _selectIndex.value = 2;
+      }
+    });
 
     McpServer.instance.bindRequestContainer(container);
 
@@ -112,7 +124,7 @@ class _DesktopHomePagePageState extends State<DesktopHomePage> implements EventL
       setState(() {});
     });
 
-    if (widget.appConfiguration.upgradeNoticeV26) {
+    if (widget.appConfiguration.upgradeNoticeV28) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         showUpgradeNotice();
       });
@@ -125,6 +137,7 @@ class _DesktopHomePagePageState extends State<DesktopHomePage> implements EventL
   void dispose() {
     _proxyStatusSub?.cancel();
     _proxyStatusSub = null;
+    _remoteHistorySubscription?.cancel();
     super.dispose();
   }
 
@@ -195,7 +208,7 @@ class _DesktopHomePagePageState extends State<DesktopHomePage> implements EventL
               actions: [
                 TextButton(
                     onPressed: () {
-                      widget.appConfiguration.upgradeNoticeV26 = false;
+                      widget.appConfiguration.upgradeNoticeV28 = false;
                       widget.appConfiguration.flushConfig();
                       Navigator.pop(context);
                     },
@@ -209,21 +222,24 @@ class _DesktopHomePagePageState extends State<DesktopHomePage> implements EventL
                       isCN
                           ? '提示：默认不会开启HTTPS抓包，请安装证书后再开启HTTPS抓包。\n'
                               '点击HTTPS抓包(加锁图标)，选择安装根证书，按照提示操作即可。\n\n'
-                              '1. 新增请求断点，可修改请求、响应后发送；\n'
-                              '2. 在请求编辑器中为Header添加自动补全建议；\n'
-                              '3. Android、iOS新增系统代理IP忽略设置；\n'
-                              '4. Android新增系统代理是否启用设置；\n'
-                              '5. Socks5代理新增 IPV6 支持；\n'
-                              '6. 修复 MacOS 网线代理设置失败问题；\n'
+                              '1. 新增多选功能，支持批量删除、导出、重放；\n'
+                              '2. 增强请求重写，支持目标请求失败时自动重写；\n'
+                              '3. 新增最小化到托盘功能；\n'
+                              '4. 修复 macOS 退出后端口号占用问题；\n'
+                              '5. Windows 系统关闭系统代理时自动清理；\n'
+                              '6. 优化 Android 应用过滤列表的图标加载与缓存；\n'
+                              '7. 优化请求菜单，新增 Copy as fetch 等剪贴板相关操作；\n'
+                              '8. 服务上报新增分离式 report server 模式；\n'
                           : 'Note: HTTPS capture is disabled by default — please install the certificate before enabling HTTPS capture.\n'
                               'Click the HTTPS capture (lock) icon, choose "Install Root Certificate", and follow the prompts to complete installation.\n\n'
-                              '1. Added request breakpoint feature, allowing modification of requests and responses before sending;\n'
-                              '2. Added autocomplete suggestions for HTTP headers in request editor;\n'
-                              '3. Added system proxy IP ignore settings for Android and iOS;\n'
-                              '4. Added system proxy enable/disable settings for Android;\n'
-                              '5. Added IPv6 support for Socks5 proxy;\n'
-                              '6. Fixed an issue where proxy settings failed on macOS; \n'
-                              ,
+                              '1. Added multi-select support for batch delete, export, and replay;\n'
+                              '2. Improved request rewrite, supporting automatic rewrite when the target request fails;\n'
+                              '3. Added minimize to tray support;\n'
+                              '4. Fixed the port occupation issue after macOS exit;\n'
+                              '5. Added automatic system proxy cleanup when disabling system proxy on Windows;\n'
+                              '6. Optimized app icon loading and caching in Android app filter list;\n'
+                              '7. Optimized the request menu with clipboard actions such as Copy as fetch;\n'
+                              '8. Added a separated report server mode for reporting service;\n',
                       style: const TextStyle(fontSize: 14))));
         });
   }

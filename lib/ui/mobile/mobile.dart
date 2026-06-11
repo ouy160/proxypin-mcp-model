@@ -33,7 +33,10 @@ import 'package:proxypin/network/channel/channel_context.dart';
 import 'package:proxypin/network/http/http.dart';
 import 'package:proxypin/network/http/websocket.dart';
 import 'package:proxypin/network/http/http_client.dart';
+import 'package:proxypin/storage/histories.dart';
 import 'package:proxypin/ui/component/memory_cleanup.dart';
+import 'package:proxypin/ui/component/multi_select_controller.dart';
+import 'package:proxypin/ui/component/utils.dart';
 import 'package:proxypin/ui/toolbox/toolbox.dart';
 import 'package:proxypin/ui/configuration.dart';
 import 'package:proxypin/ui/content/panel.dart';
@@ -41,6 +44,7 @@ import 'package:proxypin/ui/launch/launch.dart';
 import 'package:proxypin/ui/mobile/menu/drawer.dart';
 import 'package:proxypin/ui/mobile/menu/bottom_navigation.dart';
 import 'package:proxypin/ui/mobile/menu/menu.dart';
+import 'package:proxypin/ui/mobile/request/history.dart';
 import 'package:proxypin/ui/mobile/request/list.dart';
 import 'package:proxypin/ui/mobile/request/search.dart';
 import 'package:proxypin/ui/mobile/widgets/pip.dart';
@@ -77,11 +81,15 @@ class MobileApp {
 
   ///请求列表容器
   static final container = ListenableList<HttpRequest>();
+
+  static final multiSelectController = MultiSelectController();
 }
 
 class MobileHomeState extends State<MobileHomePage> implements EventListener, LifecycleListener {
   /// 选择索引
   final ValueNotifier<int> _selectIndex = ValueNotifier(0);
+
+  StreamSubscription<HistoryItem>? _remoteHistorySubscription;
 
   late ProxyServer proxyServer;
 
@@ -119,8 +127,9 @@ class MobileHomeState extends State<MobileHomePage> implements EventListener, Li
     proxyServer = ProxyServer(widget.configuration);
     proxyServer.addListener(this);
     proxyServer.start();
+    _remoteHistorySubscription = HistoryStorage.onRemoteImported.listen((item) => _openHistoryPage(item));
 
-    if (widget.appConfiguration.upgradeNoticeV26) {
+    if (widget.appConfiguration.upgradeNoticeV28) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         showUpgradeNotice();
       });
@@ -151,7 +160,26 @@ class MobileHomeState extends State<MobileHomePage> implements EventListener, Li
   @override
   void dispose() {
     AppLifecycleBinding.instance.removeListener(this);
+    _remoteHistorySubscription?.cancel();
     super.dispose();
+  }
+
+  void toRequestsView(HistoryItem item, HistoryStorage storage) {}
+
+  void _openHistoryPage(HistoryItem item) {
+    _selectIndex.value = 2;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) {
+        return;
+      }
+
+      Navigator.of(context)
+          .push(MaterialPageRoute(
+              builder: (BuildContext context) => HistoryRecord(history: item, proxyServer: proxyServer)))
+          .then((value) async {
+        Future.delayed(const Duration(seconds: 60), () => item.requests = null);
+      });
+    });
   }
 
   int exitTime = 0;
@@ -309,22 +337,26 @@ class MobileHomeState extends State<MobileHomePage> implements EventListener, Li
 
     String content = isCN
         ? '提示：默认不会开启HTTPS抓包，请安装证书后再开启HTTPS抓包。\n\n'
-            '1. 新增请求断点，可修改请求、响应后发送；\n'
-            '2. 在请求编辑器中为Header添加自动补全建议；\n'
-            '3. Android、iOS新增系统代理IP忽略设置；\n'
-            '4. Android新增系统代理是否启用设置；\n'
-            '5. Socks5代理新增 IPV6 支持；\n'
-            '6. 修复 MacOS 网线代理设置失败问题；\n'
+            '1. 新增多选功能，支持批量删除、导出、重放；\n'
+            '2. 增强请求重写，支持目标请求失败时自动重写；\n'
+            '3. 新增最小化到托盘功能；\n'
+            '4. 修复 macOS 退出后端口号占用问题；\n'
+            '5. Windows 系统关闭系统代理时自动清理；\n'
+            '6. 优化 Android 应用过滤列表的图标加载与缓存；\n'
+            '7. 优化请求菜单，新增 Copy as fetch 等剪贴板相关操作；\n'
+            '8. 服务上报新增分离式 report server 模式；\n'
         : 'Note: HTTPS capture is disabled by default — please install the certificate before enabling HTTPS capture.\n\n'
-            '1. Added request breakpoint feature, allowing modification of requests and responses before sending;\n'
-            '2. Added autocomplete suggestions for HTTP headers in request editor;\n'
-            '3. Added system proxy IP ignore settings for Android and iOS;\n'
-            '4. Added system proxy enable/disable settings for Android;\n'
-            '5. Added IPv6 support for Socks5 proxy;\n'
-            '6. Fixed an issue where proxy settings failed on macOS; \n';
+            '1. Added multi-select support for batch delete, export, and replay;\n'
+            '2. Improved request rewrite, supporting automatic rewrite when the target request fails;\n'
+            '3. Added minimize to tray support;\n'
+            '4. Fixed the port occupation issue after macOS exit;\n'
+            '5. Added automatic system proxy cleanup when disabling system proxy on Windows;\n'
+            '6. Optimized app icon loading and caching in Android app filter list;\n'
+            '7. Optimized the request menu with clipboard actions such as Copy as fetch;\n'
+            '8. Added a separated report server mode for reporting service;\n';
     showAlertDialog(isCN ? '更新内容V${AppConfiguration.version}' : "What's new in V${AppConfiguration.version}", content,
         () {
-      widget.appConfiguration.upgradeNoticeV26 = false;
+      widget.appConfiguration.upgradeNoticeV28 = false;
       widget.appConfiguration.flushConfig();
     });
   }
@@ -406,7 +438,10 @@ class RequestPageState extends State<RequestPage> {
                 value.connect ? remoteConnect(value) : const SizedBox(),
                 Expanded(
                     child: RequestListWidget(
-                        key: MobileApp.requestStateKey, proxyServer: proxyServer, list: MobileApp.container))
+                        key: MobileApp.requestStateKey,
+                        proxyServer: proxyServer,
+                        list: MobileApp.container,
+                        selectionController: MobileApp.multiSelectController))
               ]);
             }),
       ),
@@ -508,6 +543,17 @@ class _MobileAppBar extends StatelessWidget implements PreferredSizeWidget {
 
   const _MobileAppBar(this.appConfiguration, this.proxyServer, {required this.remoteDevice});
 
+  Future<void> _onClear(BuildContext context, AppLocalizations localizations) async {
+    if (!appConfiguration.clearConfirm) {
+      MobileApp.requestStateKey.currentState?.clean();
+      return;
+    }
+
+    showConfirmDialog(context, title: localizations.clearConfirm, onConfirm: () {
+      MobileApp.requestStateKey.currentState?.clean();
+    });
+  }
+
   @override
   Size get preferredSize => const Size.fromHeight(42);
 
@@ -518,15 +564,18 @@ class _MobileAppBar extends StatelessWidget implements PreferredSizeWidget {
 
     return AppBar(
         leading: bottomNavigation ? const SizedBox() : null,
-        systemOverlayStyle:
-            Platform.isAndroid ? SystemUiOverlayStyle(systemNavigationBarColor: ColorScheme.of(context).surface) : null,
+        systemOverlayStyle: Platform.isAndroid
+            ? SystemUiOverlayStyle(
+                systemNavigationBarColor: ColorScheme.of(context).surface,
+                statusBarColor: ColorScheme.of(context).surface)
+            : null,
         title: MobileSearch(
             key: MobileApp.searchStateKey, onSearch: (val) => MobileApp.requestStateKey.currentState?.search(val)),
         actions: [
           IconButton(
               tooltip: localizations.clear,
               icon: const Icon(Icons.delete_outline),
-              onPressed: () => MobileApp.requestStateKey.currentState?.clean()),
+              onPressed: () => _onClear(context, localizations)),
           const SizedBox(width: 2),
           MoreMenu(proxyServer: proxyServer, remoteDevice: remoteDevice),
           const SizedBox(width: 10),

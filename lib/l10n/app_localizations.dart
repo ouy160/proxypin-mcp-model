@@ -1,12 +1,16 @@
 import 'dart:async';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:intl/intl.dart' as intl;
 
-import 'app_localizations_en.dart';
-import 'app_localizations_zh.dart';
+import 'app_localizations_en.dart' deferred as app_localizations_en;
+import 'app_localizations_es.dart' deferred as app_localizations_es;
+import 'app_localizations_id.dart' deferred as app_localizations_id;
+import 'app_localizations_pt.dart' deferred as app_localizations_pt;
+import 'app_localizations_th.dart' deferred as app_localizations_th;
+import 'app_localizations_vi.dart' deferred as app_localizations_vi;
+import 'app_localizations_zh.dart' deferred as app_localizations_zh;
 
 // ignore_for_file: type=lint
 
@@ -92,6 +96,12 @@ abstract class AppLocalizations {
   /// A list of this localizations delegate's supported locales.
   static const List<Locale> supportedLocales = <Locale>[
     Locale('en'),
+    Locale('es'),
+    Locale('id'),
+    Locale('pt'),
+    Locale('pt', 'BR'),
+    Locale('th'),
+    Locale('vi'),
     Locale('zh'),
     Locale.fromSubtags(languageCode: 'zh', scriptCode: 'Hant')
   ];
@@ -359,6 +369,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Automatically start recording traffic when the program starts'**
   String get autoStartupDescribe;
+
+  /// No description provided for @minimizeToTrayTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Minimize to tray on close'**
+  String get minimizeToTrayTitle;
+
+  /// No description provided for @minimizeToTraySubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Closing the window will keep ProxyPin running and hide it to the system tray.'**
+  String get minimizeToTraySubtitle;
+
+  /// No description provided for @trayClosePromptContent.
+  ///
+  /// In en, this message translates to:
+  /// **'Closing the window will keep ProxyPin running in the system tray. Do you want to minimize it now?'**
+  String get trayClosePromptContent;
+
+  /// No description provided for @trayCloseExitAnyway.
+  ///
+  /// In en, this message translates to:
+  /// **'Exit anyway'**
+  String get trayCloseExitAnyway;
+
+  /// No description provided for @trayCloseMinimizeToTray.
+  ///
+  /// In en, this message translates to:
+  /// **'Minimize to tray'**
+  String get trayCloseMinimizeToTray;
 
   /// No description provided for @copied.
   ///
@@ -690,6 +730,12 @@ abstract class AppLocalizations {
   /// **'Click'**
   String get click;
 
+  /// No description provided for @loadRemoteScript.
+  ///
+  /// In en, this message translates to:
+  /// **'load remote script'**
+  String get loadRemoteScript;
+
   /// No description provided for @replace.
   ///
   /// In en, this message translates to:
@@ -761,6 +807,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Edit Report Server'**
   String get editReportServer;
+
+  /// No description provided for @splitReport.
+  ///
+  /// In en, this message translates to:
+  /// **'Split Report'**
+  String get splitReport;
 
   /// No description provided for @serverUrl.
   ///
@@ -930,6 +982,12 @@ abstract class AppLocalizations {
   /// **'Select action'**
   String get selectAction;
 
+  /// No description provided for @select.
+  ///
+  /// In en, this message translates to:
+  /// **'Select'**
+  String get select;
+
   /// No description provided for @copy.
   ///
   /// In en, this message translates to:
@@ -971,6 +1029,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Copy as Python Requests'**
   String get copyAsPythonRequests;
+
+  /// No description provided for @copyAsFetch.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy as fetch'**
+  String get copyAsFetch;
 
   /// No description provided for @delete.
   ///
@@ -1067,6 +1131,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'View Export'**
   String get viewExport;
+
+  /// No description provided for @exportDomainHar.
+  ///
+  /// In en, this message translates to:
+  /// **'Export This Domain HAR'**
+  String get exportDomainHar;
 
   /// No description provided for @timeDesc.
   ///
@@ -1680,6 +1750,18 @@ abstract class AppLocalizations {
   /// **'Automatically clean up requests on memory limit reached and keep 32 most recent after cleaning'**
   String get memoryCleanupSubtitle;
 
+  /// No description provided for @clearConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm before clearing captured records'**
+  String get clearConfirm;
+
+  /// No description provided for @clearConfirmSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Show a confirmation dialog before clearing captured records'**
+  String get clearConfirmSubtitle;
+
   /// No description provided for @unlimited.
   ///
   /// In en, this message translates to:
@@ -2106,12 +2188,6 @@ abstract class AppLocalizations {
   /// **'AFDIAN'**
   String get sponsorAfdian;
 
-  /// No description provided for @sponsorBuyMeCoffee.
-  ///
-  /// In en, this message translates to:
-  /// **'Buy Me a Coffee'**
-  String get sponsorBuyMeCoffee;
-
   /// No description provided for @privacyPolicy.
   ///
   /// In en, this message translates to:
@@ -2328,24 +2404,38 @@ class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> 
 
   @override
   Future<AppLocalizations> load(Locale locale) {
-    return SynchronousFuture<AppLocalizations>(lookupAppLocalizations(locale));
+    return lookupAppLocalizations(locale);
   }
 
   @override
-  bool isSupported(Locale locale) => <String>['en', 'zh'].contains(locale.languageCode);
+  bool isSupported(Locale locale) => <String>['en', 'es', 'id', 'pt', 'th', 'vi', 'zh'].contains(locale.languageCode);
 
   @override
   bool shouldReload(_AppLocalizationsDelegate old) => false;
 }
 
-AppLocalizations lookupAppLocalizations(Locale locale) {
+Future<AppLocalizations> lookupAppLocalizations(Locale locale) {
   // Lookup logic when language+script codes are specified.
   switch (locale.languageCode) {
     case 'zh':
       {
         switch (locale.scriptCode) {
           case 'Hant':
-            return AppLocalizationsZhHant();
+            return app_localizations_zh
+                .loadLibrary()
+                .then((dynamic _) => app_localizations_zh.AppLocalizationsZhHant());
+        }
+        break;
+      }
+  }
+
+  // Lookup logic when language+country codes are specified.
+  switch (locale.languageCode) {
+    case 'pt':
+      {
+        switch (locale.countryCode) {
+          case 'BR':
+            return app_localizations_pt.loadLibrary().then((dynamic _) => app_localizations_pt.AppLocalizationsPtBr());
         }
         break;
       }
@@ -2354,9 +2444,19 @@ AppLocalizations lookupAppLocalizations(Locale locale) {
   // Lookup logic when only language code is specified.
   switch (locale.languageCode) {
     case 'en':
-      return AppLocalizationsEn();
+      return app_localizations_en.loadLibrary().then((dynamic _) => app_localizations_en.AppLocalizationsEn());
+    case 'es':
+      return app_localizations_es.loadLibrary().then((dynamic _) => app_localizations_es.AppLocalizationsEs());
+    case 'id':
+      return app_localizations_id.loadLibrary().then((dynamic _) => app_localizations_id.AppLocalizationsId());
+    case 'pt':
+      return app_localizations_pt.loadLibrary().then((dynamic _) => app_localizations_pt.AppLocalizationsPt());
+    case 'th':
+      return app_localizations_th.loadLibrary().then((dynamic _) => app_localizations_th.AppLocalizationsTh());
+    case 'vi':
+      return app_localizations_vi.loadLibrary().then((dynamic _) => app_localizations_vi.AppLocalizationsVi());
     case 'zh':
-      return AppLocalizationsZh();
+      return app_localizations_zh.loadLibrary().then((dynamic _) => app_localizations_zh.AppLocalizationsZh());
   }
 
   throw FlutterError('AppLocalizations.delegate failed to load unsupported locale "$locale". This is likely '

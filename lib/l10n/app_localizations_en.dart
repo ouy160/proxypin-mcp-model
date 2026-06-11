@@ -141,6 +141,22 @@ class AppLocalizationsEn extends AppLocalizations {
   String get autoStartupDescribe => 'Automatically start recording traffic when the program starts';
 
   @override
+  String get minimizeToTrayTitle => 'Minimize to tray on close';
+
+  @override
+  String get minimizeToTraySubtitle => 'Closing the window will keep ProxyPin running and hide it to the system tray.';
+
+  @override
+  String get trayClosePromptContent =>
+      'Closing the window will keep ProxyPin running in the system tray. Do you want to minimize it now?';
+
+  @override
+  String get trayCloseExitAnyway => 'Exit anyway';
+
+  @override
+  String get trayCloseMinimizeToTray => 'Minimize to tray';
+
+  @override
   String get copied => 'Copied to clipboard';
 
   @override
@@ -308,6 +324,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get click => 'Click';
 
   @override
+  String get loadRemoteScript => 'load remote script';
+
+  @override
   String get replace => 'Replace';
 
   @override
@@ -342,6 +361,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get editReportServer => 'Edit Report Server';
+
+  @override
+  String get splitReport => 'Split Report';
 
   @override
   String get serverUrl => 'Server URL';
@@ -431,6 +453,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get selectAction => 'Select action';
 
   @override
+  String get select => 'Select';
+
+  @override
   String get copy => 'Copy';
 
   @override
@@ -450,6 +475,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get copyAsPythonRequests => 'Copy as Python Requests';
+
+  @override
+  String get copyAsFetch => 'Copy as fetch';
 
   @override
   String get delete => 'Delete';
@@ -498,6 +526,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get viewExport => 'View Export';
+
+  @override
+  String get exportDomainHar => 'Export This Domain HAR';
 
   @override
   String get timeDesc => 'Descending by time';
@@ -825,6 +856,12 @@ class AppLocalizationsEn extends AppLocalizations {
       'Automatically clean up requests on memory limit reached and keep 32 most recent after cleaning';
 
   @override
+  String get clearConfirm => 'Confirm before clearing captured records';
+
+  @override
+  String get clearConfirmSubtitle => 'Show a confirmation dialog before clearing captured records';
+
+  @override
   String get unlimited => 'Unlimited';
 
   @override
@@ -1042,9 +1079,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get sponsorAfdian => 'AFDIAN';
-
-  @override
-  String get sponsorBuyMeCoffee => 'Buy Me a Coffee';
 
   @override
   String get privacyPolicy => 'Privacy Policy';

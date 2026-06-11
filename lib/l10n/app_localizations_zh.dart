@@ -141,6 +141,21 @@ class AppLocalizationsZh extends AppLocalizations {
   String get autoStartupDescribe => '程序启动时自动开始记录流量';
 
   @override
+  String get minimizeToTrayTitle => '关闭时最小化到系统托盘';
+
+  @override
+  String get minimizeToTraySubtitle => '点击窗口关闭按钮时不退出程序，而是隐藏到系统托盘图标。';
+
+  @override
+  String get trayClosePromptContent => '关闭窗口后程序不会退出，而是继续在系统托盘中运行。要继续最小化到托盘吗？';
+
+  @override
+  String get trayCloseExitAnyway => '直接退出';
+
+  @override
+  String get trayCloseMinimizeToTray => '最小化到托盘';
+
+  @override
   String get copied => '已复制到剪切板';
 
   @override
@@ -308,6 +323,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get click => '点击';
 
   @override
+  String get loadRemoteScript => '加载远程脚本';
+
+  @override
   String get replace => '替换';
 
   @override
@@ -342,6 +360,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get editReportServer => '编辑上报服务器';
+
+  @override
+  String get splitReport => '分离上报';
 
   @override
   String get serverUrl => '服务器 URL';
@@ -430,6 +451,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get selectAction => '选择操作';
 
   @override
+  String get select => '选择';
+
+  @override
   String get copy => '复制';
 
   @override
@@ -449,6 +473,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get copyAsPythonRequests => '复制 Python Requests';
+
+  @override
+  String get copyAsFetch => '复制 fetch';
 
   @override
   String get delete => '删除';
@@ -497,6 +524,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get viewExport => '视图导出';
+
+  @override
+  String get exportDomainHar => '导出该域名 HAR';
 
   @override
   String get timeDesc => '按时间降序';
@@ -625,7 +655,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get trustCa => '信任证书';
 
   @override
-  String get profileDownload => '已下载描述文件';
+  String get profileDownload => 'Profile Download';
 
   @override
   String get exportCA => '导出根证书';
@@ -814,6 +844,12 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get memoryCleanupSubtitle => '到内存限制自动清理请求，清理后保留最近32条请求';
+
+  @override
+  String get clearConfirm => '清理抓包记录前确认';
+
+  @override
+  String get clearConfirmSubtitle => '开启后，点击清理抓包记录会先弹出确认框';
 
   @override
   String get unlimited => '无限制';
@@ -1029,9 +1065,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get sponsorAfdian => '爱发电赞助';
-
-  @override
-  String get sponsorBuyMeCoffee => 'Buy Me a Coffee';
 
   @override
   String get privacyPolicy => '隐私协议';
@@ -1281,6 +1314,21 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get autoStartupDescribe => '程式啟動時自動開始記錄流量';
 
   @override
+  String get minimizeToTrayTitle => '關閉時最小化到系統托盤';
+
+  @override
+  String get minimizeToTraySubtitle => '關閉視窗時隱藏到系統托盤。';
+
+  @override
+  String get trayClosePromptContent => '關閉視窗後程式不會退出，而是繼續在系統托盤中執行。要繼續最小化到托盤嗎？';
+
+  @override
+  String get trayCloseExitAnyway => '直接退出';
+
+  @override
+  String get trayCloseMinimizeToTray => '最小化到托盤';
+
+  @override
   String get copied => '已複製到剪切板';
 
   @override
@@ -1445,6 +1493,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get click => '點選';
 
   @override
+  String get loadRemoteScript => '載入遠端腳本';
+
+  @override
   String get replace => '替換';
 
   @override
@@ -1479,6 +1530,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get editReportServer => '編輯上報伺服器';
+
+  @override
+  String get splitReport => '分離上報';
 
   @override
   String get serverUrl => '伺服器 URL';
@@ -1541,7 +1595,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get appWhitelist => '應用程式白名單';
 
   @override
-  String get appWhitelistDescribe => '只代理白名單中的應用程式, 白名單啟用黑名單將會失效';
+  String get appWhitelistDescribe => '只代理白名單中的應用程式，啟用後黑名單失效。';
 
   @override
   String get appBlacklist => '應用程式黑名單';
@@ -1567,6 +1621,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get selectAction => '選擇操作';
 
   @override
+  String get select => '選擇';
+
+  @override
   String get copy => '複製';
 
   @override
@@ -1586,6 +1643,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get copyAsPythonRequests => '複製 Python Requests';
+
+  @override
+  String get copyAsFetch => '複製 fetch';
 
   @override
   String get delete => '刪除';
@@ -1634,6 +1694,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get viewExport => '檢視匯出';
+
+  @override
+  String get exportDomainHar => '匯出該網域名稱 HAR';
 
   @override
   String get timeDesc => '按時間降序';
@@ -1695,7 +1758,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String historySubtitle(Object requestLength, Object size) {
-    return '記錄數 $requestLength  檔案 $size';
+    return '記錄 $requestLength，檔案 $size';
   }
 
   @override
@@ -1738,19 +1801,19 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get downloadRootCa => '下載根憑證';
 
   @override
-  String get downloadRootCaNote => '注意：如果您將預設瀏覽器設定為 Safari 以外的瀏覽器，請點選此行複製並貼上 Safari 瀏覽器的連結';
+  String get downloadRootCaNote => '若預設瀏覽器不是 Safari，請點此複製連結後用 Safari 開啟。';
 
   @override
   String get generateCA => '重新產生根憑證';
 
   @override
-  String get generateCADescribe => '您確定要產生新的根憑證嗎? 如果確認，\n則需要重新安裝並信任新的憑證';
+  String get generateCADescribe => '確定要產生新的根憑證嗎？需重新安裝並信任新憑證。';
 
   @override
   String get resetDefaultCA => '重置預設根憑證';
 
   @override
-  String get resetDefaultCADescribe => '確定要重置為預設根憑證嗎? ProxyPin預設\n根憑證對所有使用者都是相同的.';
+  String get resetDefaultCADescribe => '確定要重置為預設根憑證嗎？預設憑證對所有使用者相同。';
 
   @override
   String get exportCaP12 => '匯出根憑證 (.p12)';
@@ -1774,21 +1837,20 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get install => '安裝';
 
   @override
-  String get installCaDescribe => '安裝憑證 設定 > 已下載描述檔案 > 安裝';
+  String get installCaDescribe => '設定 > 已下載描述檔案 > 安裝';
 
   @override
-  String get trustCaDescribe => '信任憑證 設定 > 一般 > 關於本機 > 憑證信任設定';
+  String get trustCaDescribe => '設定 > 一般 > 關於本機 > 憑證信任設定';
 
   @override
   String get androidRoot => '系統憑證 (ROOT裝置)';
 
   @override
-  String get androidRootMagisk =>
-      'Magisk模組: \n安卓ROOT裝置可以使用Magisk ProxyPinCA系統憑證模組, 安裝完重新開機後 在系統憑證檢視是否有ProxyPinCA憑證，如果有說明憑證安裝成功。';
+  String get androidRootMagisk => 'Magisk 模組：ROOT 裝置可用 ProxyPinCA 系統憑證模組，重啟後檢查是否安裝成功。';
 
   @override
   String androidRootRename(Object name) {
-    return '模組不生效可以根據網上教學安裝系統根憑證, 根憑證命名成 $name';
+    return '若模組未生效，可依教學安裝系統根憑證，命名為 $name。';
   }
 
   @override
@@ -1798,13 +1860,13 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get androidUserCA => '使用者憑證';
 
   @override
-  String get androidUserCATips => '提示：Android7+ 很多軟體不會信任使用者憑證';
+  String get androidUserCATips => 'Android 7+ 多數 App 不信任使用者憑證。';
 
   @override
   String get androidUserCAInstall => '開啟設定 -> 安全性 -> 加密和憑證 -> 安裝憑證 -> CA 憑證';
 
   @override
-  String get androidUserXposed => '推薦使用Xposed模組抓包(無需ROOT), 點選檢視wiki';
+  String get androidUserXposed => '建議使用 Xposed 模組抓包（免 ROOT），點此看 wiki。';
 
   @override
   String get configWifiProxy => '設定手機Wi-Fi代理';
@@ -1899,7 +1961,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get ipLayerProxy => 'IP層代理(Beta)';
 
   @override
-  String get ipLayerProxyDesc => 'IP層代理可抓取Flutter應用程式請求，目前不是很穩定,歡迎提交PR';
+  String get ipLayerProxyDesc => '可抓取 Flutter 請求，但穩定性仍有限。';
 
   @override
   String get inputAddress => '輸入地址';
@@ -1920,7 +1982,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get remoteConnectFail => '連接失敗，請檢查是否在同一區域網路和防火牆是否允許, ios需要開啟本機網路權限';
 
   @override
-  String get remoteConnectSuccessTips => '手機需要開啟抓包才可以抓取請求哦';
+  String get remoteConnectSuccessTips => '手機需先開啟抓包才能抓取請求。';
 
   @override
   String get windowMode => '視窗模式';
@@ -1953,6 +2015,12 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get memoryCleanupSubtitle => '到記憶體限制自動清理請求，清理後保留最近32條請求';
 
   @override
+  String get clearConfirm => '清理抓包記錄前確認';
+
+  @override
+  String get clearConfirmSubtitle => '開啟後，點擊清理抓包記錄會先彈出確認框';
+
+  @override
   String get unlimited => '無限制';
 
   @override
@@ -1968,7 +2036,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get externalProxyConnectFailure => '外部代理連接失敗';
 
   @override
-  String get externalProxyFailureConfirm => '網路不通所有介面將會存取失敗，是否繼續設定外部代理。';
+  String get externalProxyFailureConfirm => '網路異常將無法存取，仍要設定外部代理嗎？';
 
   @override
   String get mobileDisplayPacketCapture => '手機端是否展示抓包:';
@@ -2010,13 +2078,6 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get material3 => 'Material3是Google開源設計系統的最新版本';
-
-  @override
-  String get iosVpnBackgroundAudio =>
-      '開啟抓包後，退出到背景。為了維護主UI執行緒的網路通信，將啟用靜音音訊播放以保持主執行緒運作。否則，它將只在背景運作30秒。您同意在啟用抓包後在背景播放音訊嗎?';
-
-  @override
-  String get markRead => '標記已讀';
 
   @override
   String get autoRead => '自動已讀';
@@ -2121,7 +2182,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get appUpdateDialogTitle => '有可用更新';
 
   @override
-  String get appUpdateUpdateMsg => 'ProxyPin 的新版本現已推出。您想現在更新嗎？';
+  String get appUpdateUpdateMsg => 'ProxyPin 有新版本，現在更新嗎？';
 
   @override
   String get appUpdateCurrentVersionLbl => '目前版本';
@@ -2163,20 +2224,16 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get sponsorSupport => '支持項目持續開發';
 
   @override
-  String get sponsorThanks => '感謝支持開源項目，可選擇以下任意方式，幫助項目長期發展';
+  String get sponsorThanks => '感謝支持，可用以下方式協助項目發展。';
 
   @override
   String get sponsorAfdian => '愛發電贊助';
 
   @override
-  String get sponsorBuyMeCoffee => 'Buy Me a Coffee';
-
-  @override
   String get privacyPolicy => '隱私協議';
 
   @override
-  String get privacyContent =>
-      '本專案為開源抓包工具，所有功能均在本機裝置上運行；無任何後端伺服器，不會蒐集、儲存或上傳任何使用者資訊。擷取的網路資料僅在本機處理，除非您主動使用遠端轉發功能。所需權限（如網路、儲存、相機用於掃碼）僅用於實現相應功能。您可在公開的原始碼中稽核其行為。';
+  String get privacyContent => '本工具僅在本機處理抓包資料，不會蒐集或上傳個資。';
 
   @override
   String get requestCrypto => '請求解密';
