@@ -1,10 +1,12 @@
+import 'package:flutter/foundation.dart';
+
 import 'dart:io';
 import 'package:logger/logger.dart';
 
 class _AllLevelFilter extends LogFilter {
   @override
   bool shouldLog(LogEvent event) {
-    return true; // Allow all levels
+    return true;
   }
 }
 
@@ -26,10 +28,12 @@ class _DebugFileOutput extends LogOutput {
 
   @override
   void output(OutputEvent event) {
-    try {
-      _file ??= File('proxypin_debug.log');
-      _file!.writeAsStringSync('${event.lines.join('\n')}\n', mode: FileMode.append);
-    } catch (_) {}
+    if (!kReleaseMode) {
+      try {
+        _file ??= File('proxypin_debug.log');
+        _file!.writeAsStringSync('${event.lines.join('\n')}\n', mode: FileMode.append);
+      } catch (_) {}
+    }
     for (var line in event.lines) {
       print(line);
     }

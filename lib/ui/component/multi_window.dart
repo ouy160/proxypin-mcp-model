@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+import 'package:flutter/services.dart';
 import 'dart:convert';
 import 'dart:io';
 
@@ -189,12 +190,30 @@ class MultiWindow {
       'items': items?.map((e) => e.toJson()).toList()
     });
   }
+  static final Map<String, int> _openWindows = {};
 
   static Future<WindowController> openWindow(String title, String widgetName,
       {Size size = const Size(800, 680), Map<String, dynamic>? args}) async {
+    logger.d('[openWindow] widgetName=$widgetName');
     if (Platform.isAndroid || Platform.isIOS) {
       onOpenWindow?.call(widgetName, args);
-      return WindowController.fromWindowId(0); // Dummy controller
+      return WindowController.fromWindowId(0);
+    }
+    // 检查同名窗口是否存活（HandleWindowChannelCall, 窗口不存在抛PlatformException）
+    final existingId = _openWindows[widgetName];
+    if (existingId != null) {
+      try {
+        await DesktopMultiWindow.invokeMethod(existingId, "ping");
+      } on PlatformException {
+        // 窗口已死（target window not found）
+        _openWindows.remove(widgetName);
+        logger.d('[openWindow] window dead, removed');
+      } catch (_) {
+        // MissingPluginException → 窗口存活，show到前台
+        logger.d('[openWindow] window alive, showing');
+        await WindowController.fromWindowId(existingId).show();
+        return WindowController.fromWindowId(existingId);
+      }
     }
 
     var ratio = 1.0;
@@ -205,6 +224,8 @@ class MultiWindow {
     final window = await DesktopMultiWindow.createWindow(jsonEncode(
       {'name': widgetName, ...?args},
     ));
+    _openWindows[widgetName] = window.windowId;
+    logger.d('[openWindow] created, _openWindows=${_openWindows}');
     window.setTitle(title);
     final frame = Offset(50, -10) & Size(size.width * ratio+1, size.height * ratio);
     await window.setFrame(frame);
@@ -213,9 +234,7 @@ class MultiWindow {
 
     return window;
   }
-
   static bool _refreshRewrite = false;
-
   static Future<void> _handleRefreshRewrite(Operation operation, Map<dynamic, dynamic> arguments) async {
     RequestRewriteManager requestRewrites = await RequestRewriteManager.instance;
 

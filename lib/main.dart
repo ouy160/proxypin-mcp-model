@@ -32,9 +32,14 @@ import 'l10n/app_localizations.dart';
 
 ///主入口
 ///@author wanghongen
+import 'package:flutter/foundation.dart';
 void main(List<String> args) async {
+  if (!kReleaseMode && args.firstOrNull != 'multi_window') {
+    try {
+      File('proxypin_debug.log').writeAsStringSync('');
+    } catch (_) {}
+  }
   WidgetsFlutterBinding.ensureInitialized();
-
   //多窗口
   if (args.firstOrNull == 'multi_window') {
     final windowId = int.parse(args[1]);
