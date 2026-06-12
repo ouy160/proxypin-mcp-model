@@ -1,4 +1,4 @@
-﻿/*
+/*
  * Copyright 2023 Hongen Wang
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -99,22 +99,23 @@ Widget multiWindow(int windowId, Map<dynamic, dynamic> argument) {
   //请求重写
   if (argument['name'] == 'RequestRewriteWidget') {
     return futureWidget(
-        RequestRewriteManager.instance, (data) => RequestRewriteWidget(windowId: windowId, requestRewrites: data));
+        RequestRewriteManager.instance, loading: true,
+        (data) => RequestRewriteWidget(windowId: windowId, requestRewrites: data));
   }
-
   // 请求加密
   if (argument['name'] == 'RequestCryptoPage') {
-    return futureWidget(RequestCryptoManager.instance, (data) => RequestCryptoPage(windowId: windowId, manager: data));
+    return futureWidget(RequestCryptoManager.instance, loading: true,
+        (data) => RequestCryptoPage(windowId: windowId, manager: data));
   }
   // 请求映射
   if (argument['name'] == 'RequestMapPage') {
     return RequestMapPage(windowId: windowId);
   }
-
   // 请求拦截
   if (argument['name'] == 'RequestBreakpointPage') {
     return futureWidget(
-        RequestBreakpointManager.instance, (manager) => RequestBreakpointPage(windowId: windowId, manager: manager));
+        RequestBreakpointManager.instance, loading: true,
+        (manager) => RequestBreakpointPage(windowId: windowId, manager: manager));
   }
 
   if (argument['name'] == 'QrCodePage') {
@@ -205,10 +206,10 @@ class MultiWindow {
       {'name': widgetName, ...?args},
     ));
     window.setTitle(title);
-    window
-      ..setFrame(const Offset(50, -10) & Size(size.width * ratio, size.height * ratio))
-      ..center();
-    window.show();
+    final frame = Offset(50, -10) & Size(size.width * ratio+1, size.height * ratio);
+    await window.setFrame(frame);
+    await window.center();
+    await window.show();
 
     return window;
   }
