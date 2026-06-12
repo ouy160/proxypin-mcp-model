@@ -84,7 +84,20 @@ class SearchConditionsState extends State<SearchConditions> {
             decoration: InputDecoration(
               isCollapsed: true,
               contentPadding: const EdgeInsets.all(10),
-              border: const OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(15))),
+              filled: true,
+              fillColor: Color.alphaBlend(primaryColor.withValues(alpha: 0.05), Theme.of(context).colorScheme.surface),
+              border: const OutlineInputBorder(
+                borderRadius: BorderRadius.all(Radius.circular(10)),
+                borderSide: BorderSide.none,
+              ),
+              enabledBorder: const OutlineInputBorder(
+                borderRadius: BorderRadius.all(Radius.circular(10)),
+                borderSide: BorderSide.none,
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: const BorderRadius.all(Radius.circular(10)),
+                borderSide: BorderSide(color: primaryColor.withValues(alpha: 0.4), width: 1),
+              ),
               hintText: localizations.keyword,
               suffixIcon: Obx(() => IconButton(
                     tooltip: "Case Sensitive",
@@ -224,96 +237,91 @@ class SearchConditionsState extends State<SearchConditions> {
     );
   }
 
+  Widget _protocolChip(
+    String label,
+    Protocol protocol, {
+    required Color primaryColor,
+    required Color surface,
+  }) {
+    final selected = searchModel.protocols.contains(protocol);
+    final selectedBg = Color.alphaBlend(primaryColor.withValues(alpha: 0.16), surface);
+    final unselectedBg = Color.alphaBlend(primaryColor.withValues(alpha: 0.05), surface);
+    return InkWell(
+      borderRadius: BorderRadius.circular(20),
+      onTap: () => setState(() {
+        if (selected) {
+          searchModel.protocols.remove(protocol);
+        } else {
+          searchModel.protocols.add(protocol);
+        }
+      }),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 4),
+        decoration: BoxDecoration(
+          color: selected ? selectedBg : unselectedBg,
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
+            color: selected ? primaryColor : primaryColor.withValues(alpha: 0.65),
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget protocolsWidget() {
-    Color primaryColor = ColorScheme.of(context).primary;
+    final theme = Theme.of(context);
     return Wrap(
-      spacing: 5,
-      runSpacing: 2,
+      spacing: 6,
+      runSpacing: 5,
       children: <Widget>[
-        FilterChip(
-          label: const Text('HTTP'),
-          selected: searchModel.protocols.contains(Protocol.http),
-          showCheckmark: false,
-          selectedColor: primaryColor.withValues(alpha: 0.12),
-          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 0),
-          labelStyle: const TextStyle(fontSize: 12),
-          materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-          visualDensity: const VisualDensity(horizontal: -3, vertical: -3),
-          onSelected: (sel) => setState(() {
-            sel ? searchModel.protocols.add(Protocol.http) : searchModel.protocols.remove(Protocol.http);
-          }),
-        ),
-        FilterChip(
-          label: const Text('HTTPS'),
-          selected: searchModel.protocols.contains(Protocol.https),
-          showCheckmark: false,
-          selectedColor: primaryColor.withValues(alpha: 0.12),
-          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 0),
-          labelStyle: const TextStyle(fontSize: 12),
-          materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-          visualDensity: const VisualDensity(horizontal: -3, vertical: -3),
-          onSelected: (sel) => setState(() {
-            sel ? searchModel.protocols.add(Protocol.https) : searchModel.protocols.remove(Protocol.https);
-          }),
-        ),
-        FilterChip(
-          label: const Text('WS'),
-          selected: searchModel.protocols.contains(Protocol.ws),
-          showCheckmark: false,
-          selectedColor: primaryColor.withValues(alpha: 0.12),
-          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 0),
-          labelStyle: const TextStyle(fontSize: 12),
-          materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-          visualDensity: const VisualDensity(horizontal: -3, vertical: -3),
-          onSelected: (sel) => setState(() {
-            sel ? searchModel.protocols.add(Protocol.ws) : searchModel.protocols.remove(Protocol.ws);
-          }),
-        ),
-        FilterChip(
-          label: const Text('HTTP/1'),
-          selected: searchModel.protocols.contains(Protocol.http1),
-          showCheckmark: false,
-          selectedColor: primaryColor.withValues(alpha: 0.12),
-          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 0),
-          labelStyle: const TextStyle(fontSize: 12),
-          materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-          visualDensity: const VisualDensity(horizontal: -3, vertical: -3),
-          onSelected: (sel) => setState(() {
-            sel ? searchModel.protocols.add(Protocol.http1) : searchModel.protocols.remove(Protocol.http1);
-          }),
-        ),
-        FilterChip(
-          label: const Text('H2'),
-          selected: searchModel.protocols.contains(Protocol.h2),
-          showCheckmark: false,
-          selectedColor: primaryColor.withValues(alpha: 0.12),
-          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 0),
-          labelStyle: const TextStyle(fontSize: 12),
-          materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-          visualDensity: const VisualDensity(horizontal: -3, vertical: -3),
-          onSelected: (sel) => setState(() {
-            sel ? searchModel.protocols.add(Protocol.h2) : searchModel.protocols.remove(Protocol.h2);
-          }),
-        ),
+        _protocolChip('HTTP', Protocol.http, primaryColor: theme.colorScheme.primary, surface: theme.colorScheme.surface),
+        _protocolChip('HTTPS', Protocol.https, primaryColor: theme.colorScheme.primary, surface: theme.colorScheme.surface),
+        _protocolChip('WS', Protocol.ws, primaryColor: theme.colorScheme.primary, surface: theme.colorScheme.surface),
+        _protocolChip('HTTP/1', Protocol.http1, primaryColor: theme.colorScheme.primary, surface: theme.colorScheme.surface),
+        _protocolChip('H2', Protocol.h2, primaryColor: theme.colorScheme.primary, surface: theme.colorScheme.surface),
       ],
     );
   }
 
+  Widget _optionPill(String title, Option option, {required Color primaryColor, required Color surface}) {
+    final selected = searchModel.searchOptions.contains(option);
+    final selectedBg = Color.alphaBlend(primaryColor.withValues(alpha: 0.16), surface);
+    final unselectedBg = Color.alphaBlend(primaryColor.withValues(alpha: 0.05), surface);
+    return InkWell(
+      borderRadius: BorderRadius.circular(14),
+      onTap: () => setState(() {
+        if (selected) {
+          searchModel.searchOptions.remove(option);
+        } else {
+          searchModel.searchOptions.add(option);
+        }
+      }),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+        decoration: BoxDecoration(
+          color: selected ? selectedBg : unselectedBg,
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: Text(
+          title,
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
+            color: selected ? primaryColor : primaryColor.withValues(alpha: 0.65),
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget options(String title, Option option) {
-    bool isCN = localizations.localeName == 'zh';
-    return Container(
-        constraints: BoxConstraints(maxWidth: isCN ? 100 : 132, minWidth: 100, maxHeight: 33),
-        child: Row(children: [
-          Text(title, style: const TextStyle(fontSize: 12)),
-          Checkbox(
-              visualDensity: VisualDensity.compact,
-              value: searchModel.searchOptions.contains(option),
-              onChanged: (val) {
-                setState(() {
-                  val == true ? searchModel.searchOptions.add(option) : searchModel.searchOptions.remove(option);
-                });
-              })
-        ]));
+    final theme = Theme.of(context);
+    return _optionPill(title, option, primaryColor: theme.colorScheme.primary, surface: theme.colorScheme.surface);
   }
 
   Widget row(Widget child, Widget child2) {
@@ -324,7 +332,10 @@ class SearchConditionsState extends State<SearchConditions> {
   }
 
   Widget textField({String? initialValue, final ValueChanged<String>? onChanged, TextStyle? style}) {
-    Color color = Theme.of(context).colorScheme.primary;
+    final theme = Theme.of(context);
+    final primaryColor = theme.colorScheme.primary;
+    final surface = theme.colorScheme.surface;
+    final fill = Color.alphaBlend(primaryColor.withValues(alpha: 0.05), surface);
 
     return ConstrainedBox(
         constraints: const BoxConstraints(maxHeight: 32),
@@ -337,7 +348,20 @@ class SearchConditionsState extends State<SearchConditions> {
           style: style,
           decoration: InputDecoration(
             contentPadding: const EdgeInsets.only(left: 10, right: 10, top: 2, bottom: 2),
-            border: OutlineInputBorder(borderSide: BorderSide(width: 1, color: color.withOpacity(0.3))),
+            filled: true,
+            fillColor: fill,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(6),
+              borderSide: BorderSide.none,
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(6),
+              borderSide: BorderSide.none,
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(6),
+              borderSide: BorderSide(color: primaryColor.withValues(alpha: 0.4), width: 1),
+            ),
           ),
         ));
   }

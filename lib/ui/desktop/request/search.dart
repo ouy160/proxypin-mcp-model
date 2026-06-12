@@ -18,6 +18,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:proxypin/l10n/app_localizations.dart';
 import 'package:proxypin/network/http/content_type.dart';
+import 'package:proxypin/network/util/logger.dart';
 import 'package:proxypin/ui/component/search_condition.dart';
 
 import '../../component/model/search_model.dart';
@@ -36,6 +37,7 @@ class Search extends StatefulWidget {
 }
 
 class SearchState extends State<Search> {
+  final GlobalKey _popupKey = GlobalKey();
   SearchModel searchModel = SearchModel();
   bool searched = false;
   TextEditingController keywordController = TextEditingController();
@@ -76,10 +78,15 @@ class SearchState extends State<Search> {
         },
         decoration: InputDecoration(
           contentPadding: const EdgeInsets.all(0),
-          enabledBorder: OutlineInputBorder(
-              borderSide: BorderSide(color: Colors.grey.shade400, width: 0.5), borderRadius: BorderRadius.circular(15)),
-          border: OutlineInputBorder(
-              borderSide: BorderSide(color: Colors.grey.shade400, width: 0.5), borderRadius: BorderRadius.circular(15)),
+          filled: true,
+          fillColor: Color.alphaBlend(
+              Theme.of(context).colorScheme.primary.withValues(alpha: 0.05), Theme.of(context).colorScheme.surface),
+          enabledBorder: OutlineInputBorder(borderSide: BorderSide.none, borderRadius: BorderRadius.circular(15)),
+          border: OutlineInputBorder(borderSide: BorderSide.none, borderRadius: BorderRadius.circular(15)),
+          focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(15),
+              borderSide: BorderSide(
+                  color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.4), width: 1)),
           prefixIcon: InkWell(
               child: Icon(Icons.search, color: searched ? Colors.green : Theme.of(context).colorScheme.primary),
               onTapDown: (details) {
@@ -116,6 +123,7 @@ class SearchState extends State<Search> {
               child: DefaultTextStyle.merge(
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 14),
                   child: SizedBox(
+                      key: _popupKey,
                       child: SearchConditions(
                           searchModel: searchModel,
                           onSearch: (val) {
@@ -127,6 +135,14 @@ class SearchState extends State<Search> {
                             });
                           }))))
         ]);
+    // 弹窗渲染后测量实际尺寸
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final rb = _popupKey.currentContext?.findRenderObject() as RenderBox?;
+      if (rb != null && rb.hasSize) {
+        logger.w('搜索弹窗实际尺寸日志 (渲染后):\n'
+            '  弹窗内容尺寸: ${rb.size.width.toStringAsFixed(0)}x${rb.size.height.toStringAsFixed(0)}');
+      }
+    });
   }
 }
 
