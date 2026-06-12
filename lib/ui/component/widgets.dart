@@ -1,6 +1,45 @@
 import 'package:flutter/material.dart';
 import 'package:proxypin/utils/lang.dart';
 
+/// 偏好设置、下拉菜单等容器
+/// 背景：原有 surface 颜色 + 淡淡主题色叠加
+class TintedSurface extends StatelessWidget {
+  final Widget child;
+  final Color? color;
+  final double tint;
+  final BorderRadius? borderRadius;
+  final EdgeInsetsGeometry? padding;
+
+  const TintedSurface({
+    super.key,
+    required this.child,
+    this.color,
+    this.tint = 0.08,
+    this.borderRadius,
+    this.padding,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final themeColor = color ?? theme.colorScheme.primary;
+    final radius = borderRadius ?? BorderRadius.circular(10);
+    final base = theme.colorScheme.surface;
+    return ClipRRect(
+      borderRadius: radius,
+      child: Container(
+        padding: padding,
+        decoration: BoxDecoration(
+          color: Color.alphaBlend(themeColor.withValues(alpha: tint), base),
+          borderRadius: radius,
+          border: Border.all(color: themeColor.withValues(alpha: tint * 2), width: 0.5),
+        ),
+        child: child,
+      ),
+    );
+  }
+}
+
 class CustomPopupMenuItem<T> extends PopupMenuItem<T> {
   final Color? color;
 

@@ -44,8 +44,25 @@ class Setting extends StatefulWidget {
 
 class _SettingState extends State<Setting> {
   late Configuration configuration;
-
   AppLocalizations get localizations => AppLocalizations.of(context)!;
+
+  MenuStyle get _menuStyle {
+    final theme = Theme.of(context);
+    final themeColor = theme.colorScheme.primary;
+    final bg = Color.alphaBlend(themeColor.withValues(alpha: 0.08), theme.colorScheme.surface);
+    final border = themeColor.withValues(alpha: 0.2);
+    return MenuStyle(
+      backgroundColor: WidgetStatePropertyAll(bg),
+      elevation: const WidgetStatePropertyAll(8),
+      shadowColor: const WidgetStatePropertyAll(Colors.black54),
+      shape: WidgetStatePropertyAll(
+        RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10),
+          side: BorderSide(color: border, width: 0.5),
+        ),
+      ),
+    );
+  }
 
   @override
   void initState() {
@@ -56,6 +73,7 @@ class _SettingState extends State<Setting> {
   @override
   Widget build(BuildContext context) {
     return MenuAnchor(
+      style: _menuStyle,
       builder: (context, controller, child) {
         return IconButton(
             icon: const Icon(Icons.settings, size: 21),
@@ -191,10 +209,29 @@ class _ProxyMenuState extends State<_ProxyMenu> {
     super.dispose();
   }
 
+  MenuStyle get _menuStyle {
+    final theme = Theme.of(context);
+    final themeColor = theme.colorScheme.primary;
+    final bg = Color.alphaBlend(themeColor.withValues(alpha: 0.08), theme.colorScheme.surface);
+    final border = themeColor.withValues(alpha: 0.2);
+    return MenuStyle(
+      backgroundColor: WidgetStatePropertyAll(bg),
+      elevation: const WidgetStatePropertyAll(8),
+      shadowColor: const WidgetStatePropertyAll(Colors.black54),
+      shape: WidgetStatePropertyAll(
+        RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10),
+          side: BorderSide(color: border, width: 0.5),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     bool isEn = localizations.localeName.startsWith("en");
     return SubmenuButton(
+      menuStyle: _menuStyle,
       menuChildren: [
         PortWidget(proxyServer: widget.proxyServer, textStyle: const TextStyle(fontSize: 13)),
         const Divider(thickness: 0.3, height: 8),

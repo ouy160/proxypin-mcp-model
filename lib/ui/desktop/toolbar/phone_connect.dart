@@ -16,6 +16,7 @@
 import 'package:flutter/material.dart';
 import 'package:proxypin/l10n/app_localizations.dart';
 import 'package:proxypin/network/bin/server.dart';
+import 'package:proxypin/ui/component/widgets.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 
 /// @author wanghongen
@@ -48,50 +49,58 @@ class _PhoneConnectState extends State<PhoneConnect> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
+        backgroundColor: Colors.transparent,
+        contentPadding: EdgeInsets.zero,
+        titlePadding: EdgeInsets.zero,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10.0)),
-        title: Row(children: [
-          Text(localizations.mobileConnect, style: const TextStyle(fontSize: 18)),
-          const Expanded(child: Align(alignment: Alignment.topRight, child: CloseButton()))
-        ]),
-        contentPadding: const EdgeInsets.all(10),
-        content: SizedBox(
-            height: 300,
-            width: 300,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                if (widget.proxyServer.isRunning)
-                  QrImageView(
-                      backgroundColor: Colors.white,
-                      data: "proxypin://connect?host=$host&port=${widget.proxyServer.port}",
-                      size: 200.0)
-                else
-                  SizedBox(
-                      height: 200,
-                      child: Center(child: Text(localizations.serverNotStart, style: const TextStyle(fontSize: 16)))),
-                const SizedBox(height: 10),
-                Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                  Text(localizations.localIP),
-                  DropdownButton(
-                      value: host,
-                      isDense: true,
-                      borderRadius: BorderRadius.circular(8),
-                      padding: const EdgeInsets.only(right: 10),
-                      items: widget.hosts
-                          .map((it) => DropdownMenuItem(
-                                value: it,
-                                child: SelectableText('$it:$port'),
-                              ))
-                          .toList(),
-                      onChanged: (String? value) {
-                        setState(() {
-                          host = value!;
-                        });
-                      })
-                ]),
-                const SizedBox(height: 10),
-                Text(localizations.mobileScan, style: const TextStyle(fontSize: 16)),
-              ],
-            )));
+        content: TintedSurface(
+          padding: const EdgeInsets.all(10),
+          child: SizedBox(
+              height: 300,
+              width: 300,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Row(children: [
+                    Padding(
+                        padding: const EdgeInsets.only(left: 10, top: 6),
+                        child: Text(localizations.mobileConnect, style: const TextStyle(fontSize: 18))),
+                    const Expanded(
+                        child: Align(alignment: Alignment.topRight, child: CloseButton()))
+                  ]),
+                  if (widget.proxyServer.isRunning)
+                    QrImageView(
+                        backgroundColor: Colors.white,
+                        data: "proxypin://connect?host=$host&port=${widget.proxyServer.port}",
+                        size: 200.0)
+                  else
+                    SizedBox(
+                        height: 200,
+                        child: Center(child: Text(localizations.serverNotStart, style: const TextStyle(fontSize: 16)))),
+                  const SizedBox(height: 10),
+                  Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                    Text(localizations.localIP),
+                    DropdownButton(
+                        value: host,
+                        isDense: true,
+                        borderRadius: BorderRadius.circular(8),
+                        padding: const EdgeInsets.only(right: 10),
+                        items: widget.hosts
+                            .map((it) => DropdownMenuItem(
+                                  value: it,
+                                  child: SelectableText('$it:$port'),
+                                ))
+                            .toList(),
+                        onChanged: (String? value) {
+                          setState(() {
+                            host = value!;
+                          });
+                        })
+                  ]),
+                  const SizedBox(height: 10),
+                  Text(localizations.mobileScan, style: const TextStyle(fontSize: 16)),
+                ],
+              ))),
+    );
   }
 }

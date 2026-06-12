@@ -63,22 +63,31 @@ class _PreferenceState extends State<Preference> {
     var subtitleStyle = TextStyle(fontSize: 12, color: Colors.grey);
 
     return AlertDialog(
+        backgroundColor: Colors.transparent,
+        contentPadding: EdgeInsets.zero,
+        titlePadding: EdgeInsets.zero,
         scrollable: true,
-        title: Row(children: [
-          const Icon(Icons.settings, size: 20),
-          const SizedBox(width: 10),
-          Text(localizations.preference, style: Theme.of(context).textTheme.titleMedium),
-          const Expanded(child: Align(alignment: Alignment.topRight, child: CloseButton()))
-        ]),
-        content: SizedBox(
-            width: 400,
-            child: Column(children: [
+        content: TintedSurface(
+          padding: const EdgeInsets.all(20),
+          child: SizedBox(
+              width: 400,
+              child: Column(mainAxisSize: MainAxisSize.min, children: [
+                Row(children: [
+                  const Icon(Icons.settings, size: 20),
+                  const SizedBox(width: 10),
+                  Text(localizations.preference, style: Theme.of(context).textTheme.titleMedium),
+                  const Expanded(child: Align(alignment: Alignment.topRight, child: CloseButton()))
+                ]),
               Row(children: [
                 SizedBox(width: 100, child: Text("${localizations.language}: ", style: titleStyle)),
                 DropdownButton<Locale>(
                     value: appConfiguration.language,
                     onChanged: (Locale? value) => appConfiguration.language = value,
                     focusColor: Colors.transparent,
+                    dropdownColor: Color.alphaBlend(
+                        Theme.of(context).colorScheme.primary.withValues(alpha: 0.08),
+                        Theme.of(context).colorScheme.surface),
+                    borderRadius: BorderRadius.circular(10),
                     items: [
                       DropdownMenuItem(value: null, child: Text(localizations.followSystem)),
                       const DropdownMenuItem(value: Locale.fromSubtags(languageCode: "zh"), child: Text("简体中文")),
@@ -97,6 +106,10 @@ class _PreferenceState extends State<Preference> {
                     value: appConfiguration.themeMode,
                     onChanged: (ThemeMode? value) => appConfiguration.themeMode = value!,
                     focusColor: Colors.transparent,
+                    dropdownColor: Color.alphaBlend(
+                        Theme.of(context).colorScheme.primary.withValues(alpha: 0.08),
+                        Theme.of(context).colorScheme.surface),
+                    borderRadius: BorderRadius.circular(10),
                     items: [
                       DropdownMenuItem(value: ThemeMode.system, child: Text(localizations.followSystem)),
                       DropdownMenuItem(value: ThemeMode.light, child: Text(localizations.themeLight)),
@@ -176,27 +189,32 @@ class _PreferenceState extends State<Preference> {
                   trailing: memoryCleanup(context, localizations)),
 
               SizedBox(height: 5),
-            ])));
+            ]))));
   }
 
   ///主题颜色
   Widget themeColor(BuildContext context) {
     return Wrap(
       children: ColorMapping.colors.entries.map((pair) {
-        var dividerColor = Theme.of(context).focusColor;
-        var background = appConfiguration.themeColor == pair.value ? dividerColor : Colors.transparent;
-
+        final selected = appConfiguration.themeColor == pair.value;
         return GestureDetector(
             onTap: () => appConfiguration.setThemeColor = pair.key,
             child: Tooltip(
               message: pair.key,
-              child: Container(
-                margin: const EdgeInsets.all(4.0),
-                decoration: BoxDecoration(
-                  color: background,
-                  border: Border.all(color: Colors.transparent, width: 8),
+              child: Padding(
+                padding: const EdgeInsets.all(4.0),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 150),
+                  width: selected ? 24 : 18,
+                  height: selected ? 24 : 18,
+                  decoration: BoxDecoration(
+                    color: pair.value,
+                    shape: BoxShape.circle,
+                    boxShadow: selected
+                        ? [BoxShadow(color: pair.value.withValues(alpha: 0.5), blurRadius: 6, spreadRadius: 1)]
+                        : null,
+                  ),
                 ),
-                child: Dot(color: pair.value, size: 15),
               ),
             ));
       }).toList(),
@@ -210,8 +228,11 @@ class _PreferenceState extends State<Preference> {
     try {
       return DropdownButton<int>(
           value: appConfiguration.memoryCleanupThreshold,
+          dropdownColor: Color.alphaBlend(
+              Theme.of(context).colorScheme.primary.withValues(alpha: 0.08),
+              Theme.of(context).colorScheme.surface),
+          borderRadius: BorderRadius.circular(10),
           onTap: () {
-            memoryCleanupOpened = true;
           },
           onChanged: (val) {
             memoryCleanupOpened = false;

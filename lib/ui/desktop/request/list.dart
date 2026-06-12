@@ -215,9 +215,19 @@ class DesktopRequestListState extends State<DesktopRequestListWidget> with Autom
   }
 
   Widget popupMenus() {
+    final theme = Theme.of(context);
+    final themeColor = theme.colorScheme.primary;
+    final menuBg = Color.alphaBlend(themeColor.withValues(alpha: 0.08), theme.colorScheme.surface);
+    final menuBorder = themeColor.withValues(alpha: 0.2);
     return PopupMenuButton<_RequestListMenuAction>(
         offset: const Offset(0, 32),
         icon: const Icon(Icons.more_vert_outlined, size: 20),
+        color: menuBg,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10),
+          side: BorderSide(color: menuBorder, width: 0.5),
+        ),
+        elevation: 8,
         onSelected: _onMenuSelected,
         itemBuilder: (BuildContext context) {
           return <PopupMenuEntry<_RequestListMenuAction>>[

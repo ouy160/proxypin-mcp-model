@@ -367,9 +367,19 @@ class DropdownMenuState extends State<DropdownMenu> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final themeColor = theme.colorScheme.primary;
+    final menuBg = Color.alphaBlend(themeColor.withValues(alpha: 0.08), theme.colorScheme.surface);
+    final menuBorder = themeColor.withValues(alpha: 0.2);
     return PopupMenuButton(
       tooltip: '',
       initialValue: selectValue,
+      color: menuBg,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(10),
+        side: BorderSide(color: menuBorder, width: 0.5),
+      ),
+      elevation: 8,
       child: Wrap(runAlignment: WrapAlignment.center, children: [
         Text(selectValue ?? '', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
         const Icon(Icons.arrow_drop_down, size: 20)

@@ -46,12 +46,17 @@ class MethodPopupMenu extends StatelessWidget {
       items.add(DropdownMenuItem<HttpMethod?>(value: m, child: _buildMenuItem(m, context)));
     }
 
+    final theme = Theme.of(context);
+    final themeColor = theme.colorScheme.primary;
+    final menuBg = Color.alphaBlend(themeColor.withValues(alpha: 0.08), theme.colorScheme.surface);
     final dropdown = DropdownButton<HttpMethod?>(
       padding: const EdgeInsets.only(),
       alignment: AlignmentDirectional.center,
       isDense: true,
       focusColor: Colors.transparent,
       underline: const SizedBox(),
+      dropdownColor: menuBg,
+      borderRadius: BorderRadius.circular(10),
       value: value,
       onChanged: onChanged,
       items: items,

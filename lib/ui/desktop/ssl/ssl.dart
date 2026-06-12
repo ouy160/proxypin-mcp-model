@@ -24,9 +24,28 @@ class SslWidget extends StatefulWidget {
 class _SslState extends State<SslWidget> {
   AppLocalizations get localizations => AppLocalizations.of(context)!;
 
+  MenuStyle get _menuStyle {
+    final theme = Theme.of(context);
+    final themeColor = theme.colorScheme.primary;
+    final bg = Color.alphaBlend(themeColor.withValues(alpha: 0.08), theme.colorScheme.surface);
+    final border = themeColor.withValues(alpha: 0.2);
+    return MenuStyle(
+      backgroundColor: WidgetStatePropertyAll(bg),
+      elevation: const WidgetStatePropertyAll(8),
+      shadowColor: const WidgetStatePropertyAll(Colors.black54),
+      shape: WidgetStatePropertyAll(
+        RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10),
+          side: BorderSide(color: border, width: 0.5),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return MenuAnchor(
+        style: _menuStyle,
         builder: (context, controller, child) {
           return IconButton(
               icon: widget.proxyServer.enableSsl
@@ -124,6 +143,7 @@ class _SslState extends State<SslWidget> {
 
   Widget exportMenu() {
     return SubmenuButton(
+        menuStyle: _menuStyle,
         menuChildren: [
           MenuItemButton(
               child: Padding(

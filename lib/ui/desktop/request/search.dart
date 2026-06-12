@@ -157,11 +157,22 @@ class ContentTypeState extends State<ContentTypeSelect> {
     value ??= localizations.all;
     types ??= ["JSON", "IMAGE", "HTML", "XML", "JS", "CSS", "TEXT",  localizations.all];
 
+    final theme = Theme.of(context);
+    final themeColor = theme.colorScheme.primary;
+    final menuBg = Color.alphaBlend(themeColor.withValues(alpha: 0.08), theme.colorScheme.surface);
+    final menuBorder = themeColor.withValues(alpha: 0.2);
+
     return PopupMenuButton(
       initialValue: value,
       offset: Offset(-10, (types!.length - types!.indexOf(value!)) * -30.0 - 10),
       tooltip: localizations.responseType,
       constraints: const BoxConstraints(maxWidth: 75),
+      color: menuBg,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(10),
+        side: BorderSide(color: menuBorder, width: 0.5),
+      ),
+      elevation: 8,
       child: Wrap(runAlignment: WrapAlignment.center, children: [
         Text(value!, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
         const Icon(Icons.arrow_drop_up, size: 20)

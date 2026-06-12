@@ -19,12 +19,22 @@ class _HistoryCacheTimeState extends State<HistoryCacheTime> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final themeColor = theme.colorScheme.primary;
+    final menuBg = Color.alphaBlend(themeColor.withValues(alpha: 0.08), theme.colorScheme.surface);
+    final menuBorder = themeColor.withValues(alpha: 0.2);
     return PopupMenuButton(
         tooltip: localizations.historyCacheTime,
         offset: const Offset(0, 35),
         icon: const Icon(Icons.av_timer, size: 19),
         initialValue: widget.configuration.historyCacheTime,
         constraints: const BoxConstraints(minWidth: 34, minHeight: 34),
+        color: menuBg,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10),
+          side: BorderSide(color: menuBorder, width: 0.5),
+        ),
+        elevation: 8,
         onSelected: (val) {
           widget.configuration.historyCacheTime = val;
           widget.configuration.flushConfig();

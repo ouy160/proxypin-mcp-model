@@ -55,9 +55,11 @@ class _ExternalProxyDialogState extends State<ExternalProxyDialog> {
     bool isCN = Localizations.localeOf(context) == const Locale.fromSubtags(languageCode: 'zh');
 
     return AlertDialog(
+        backgroundColor: Colors.transparent,
+        contentPadding: EdgeInsets.zero,
+        titlePadding: EdgeInsets.zero,
         scrollable: true,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10.0)),
-        title: Text(localizations.externalProxy, style: const TextStyle(fontSize: 15)),
         actions: [
           TextButton(
               onPressed: () {
@@ -73,9 +75,23 @@ class _ExternalProxyDialogState extends State<ExternalProxyDialog> {
               },
               child: Text(localizations.confirm))
         ],
-        content: Form(
-            key: formKey,
-            child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+        content: TintedSurface(
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
+            child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(children: [
+                    Text(localizations.externalProxy, style: const TextStyle(fontSize: 15)),
+                    const Expanded(child: Align(alignment: Alignment.topRight, child: CloseButton()))
+                  ]),
+                  const SizedBox(height: 6),
+                  Form(
+                      key: formKey,
+                      child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
               const SizedBox(height: 10),
               Row(children: [
                 Expanded(child: Text("${localizations.enable}：")),
@@ -165,7 +181,7 @@ class _ExternalProxyDialogState extends State<ExternalProxyDialog> {
                       ),
                     ))
                   ])),
-            ])));
+            ]))])));
   }
 
   submit() async {

@@ -194,11 +194,18 @@ class _PreferenceState extends State<Preference> {
         context: context,
         builder: (context) {
           return AlertDialog(
-            contentPadding: const EdgeInsets.only(left: 5, top: 5),
-            actionsPadding: const EdgeInsets.only(bottom: 5, right: 5),
-            title: Text(localizations.language, style: const TextStyle(fontSize: 16)),
-            content: Wrap(
-              children: [
+            backgroundColor: Colors.transparent,
+            contentPadding: EdgeInsets.zero,
+            titlePadding: EdgeInsets.zero,
+            content: TintedSurface(
+              padding: const EdgeInsets.only(left: 5, top: 5),
+              child: Column(mainAxisSize: MainAxisSize.min, children: [
+                Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+                    child: Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text(localizations.language, style: const TextStyle(fontSize: 16)))),
+                Wrap(children: [
                 TextButton(
                     onPressed: () {
                       appConfiguration.language = null;
@@ -248,8 +255,8 @@ class _PreferenceState extends State<Preference> {
                       Navigator.of(context).pop();
                     }),
                 const Divider(thickness: 0.5),
-              ],
-            ),
+              ]),  // close Wrap
+            ])),  // close Column children, Column, GlassSurface
             actions: [
               TextButton(
                   onPressed: () {
@@ -268,6 +275,10 @@ class _PreferenceState extends State<Preference> {
     try {
       return DropdownButton<int>(
           value: appConfiguration.memoryCleanupThreshold,
+          dropdownColor: Color.alphaBlend(
+              Theme.of(context).colorScheme.primary.withValues(alpha: 0.08),
+              Theme.of(context).colorScheme.surface),
+          borderRadius: BorderRadius.circular(10),
           onTap: () => memoryCleanupOpened = true,
           onChanged: (val) {
             memoryCleanupOpened = false;

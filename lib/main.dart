@@ -138,8 +138,22 @@ class FluentApp extends StatelessWidget {
       themeData = themeData.useSystemChineseFont();
     }
 
+    final dropdownBg = Color.alphaBlend(themeColor.withValues(alpha: 0.08), colorScheme.surface);
+    final dropdownBorder = themeColor.withValues(alpha: 0.2);
     return themeData.copyWith(
         dialogTheme:
-            themeData.dialogTheme.copyWith(shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))));
+            themeData.dialogTheme.copyWith(shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))),
+        dropdownMenuTheme: DropdownMenuThemeData(
+          menuStyle: MenuStyle(
+            backgroundColor: WidgetStatePropertyAll(dropdownBg),
+            elevation: const WidgetStatePropertyAll(8),
+            shape: WidgetStatePropertyAll(
+              RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+                side: BorderSide(color: dropdownBorder, width: 0.5),
+              ),
+            ),
+          ),
+        ));
   }
 }
