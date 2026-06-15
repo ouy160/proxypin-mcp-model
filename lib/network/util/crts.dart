@@ -164,7 +164,7 @@ class CertificateManager {
       issuer: x509Subject,
       subject: x509Subject,
       keyUsage: ExtensionKeyUsage(ExtensionKeyUsage.keyCertSign),
-      extKeyUsage: [ExtendedKeyUsage.SERVER_AUTH],
+      extKeyUsage: const [ExtendedKeyUsage.SERVER_AUTH, ExtendedKeyUsage.CLIENT_AUTH],
       basicConstraints: BasicConstraints(isCA: true),
     );
 
