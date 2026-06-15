@@ -91,6 +91,54 @@
 - **测试文件清理**：移除仓库中的调试测试文件和测试 API 脚本。
 
 ---
+### [updating 相对 fork 起点累积] - 2026-06-15
+
+> 对比基线：上游 main 的 `48506e5`（fork 同步窗口起点之一）。本节记录 `updating` 分支从该点起逐步积累的 **fork 独有**功能变化与 bug 修复，独立于上游 main 的开发线。
+
+#### 新功能
+
++ **MCP Server 集成与 UI**：在 ProxyPin 内置完整的 MCP Server，让 Claude / Cursor / Windsurf 等 AI 工具能直接连接、读取、操控抓包数据。新增 MCP 页面用于展示工具列表与连接状态。`feat: add MCP server integration and UI`（`fe055bb`）。
++ **MCP 工具扩展 18 个 + 多平台 CI 发布**：一次性扩展 18 个 MCP 工具，配套 GitHub Actions 多平台构建与自动发布流程。`feat(mcp): add 18 new MCP tools + multi-platform CI release`（`40ebe66`）。
++ **MCP 抓包控制三件套**：新增 `start_capture` / `stop_capture` / `clear_requests` 三个工具，使 AI 可以程序化控制抓包启停与列表清空。`feat(mcp): 新增start_capture/stop_capture/clear_requests三个抓包控制工具`（`de60158`）。
++ **MCP 页面工具列表动态化**：MCP 页面可用工具列表从注册中心动态拉取，新增工具自动展示，无需手动改 UI。`feat(ui): MCP页面可用工具列表动态展示全部工具`（`ed879e9`）。
++ **CA 证书增加 CLIENT_AUTH 扩展密钥用途**：重新生成根 CA 时，`ExtendedKeyUsage` 同时包含 `SERVER_AUTH` 和 `CLIENT_AUTH`，避免部分客户端校验失败。`feat: 重新生成CA证书，增加CLIENT_AUTH扩展密钥用途`（`be4cf54`）。
+
+#### 修复
+
++ **SSE 流响应体无法显示**：抓包后响应体面板在 SSE 流场景下显示为空。`fix: 修复SSE流响应体无法显示的问题`（`b5f618b`）。
++ **SSE 流响应头保留 chunked**：保留 `Transfer-Encoding: chunked` 让客户端按流式正确解析。`fix: SSE流响应头保留Transfer-Encoding: chunked让客户端正确解析`（`3d62207`）。
++ **SSE 流抓取支持 application/json+chunked**：QA T-01 验收通过，扩展 SSE 抓取对 `application/json+chunked` 的支持。`e8c8808`。
++ **MCP 抓包控制同步驱动 GUI 状态**：`start_capture` / `stop_capture` / `clear_requests` 同步驱动 UI 状态，避免工具调用成功但界面不更新。`fix(mcp): 让start_capture/stop_capture/clear_requests同步驱动GUI状态`（`c589dcc`）。
++ **`dart:io HttpHeaders` 无 `toList()` 方法**：MCP 工具读取响应头时调用 `HttpHeaders.toList()` 报错。改用 `headers.entries` 正确遍历。`fix(mcp): fix dart:io HttpHeaders has no toList() method`（`b47d789`）。
++ **`StreamController` 未关闭导致内存泄漏**：`ProxyServer` 添加 `dispose` 方法关闭 StreamController。`ff89ca1`（ISSUE-01）。
++ **`_buildConfigGuide` 重复调用 `McpTools.getToolDefinitions`**：消除每次构建引导时重复的元数据拉取，降低不必要的 CPU 开销。`0d7e7c4`（ISSUE-02）。
++ **OpenSSL 证书验证失败**（与 1.2.8 段互补，此处简述 fork 侧前置修复）：SKI 双层 OCTET STRING 编码、KeyUsage 常量 MSB-first 顺序、CA 自签名 AKI 使用自身 SKI、`generateNewRootCA` 自动刷新配置、移除 `post_handshake_auth` 跳过逻辑。`34af26b` / `58237bb` / `5683571`。
++ **SOCKS5 + TLS HandshakeException**：SOCKS5 场景下主动创建 upstream channel 修复 `HandshakeException`；并修正一处提前创建 channel 导致的副作用。`fix(ssl): SOCKS5 场景下主动创建 upstream channel`（`973ffc1`）/ `fix(ssl): 移除SOCKS5路径下提前创建upstream channel`（`c347fe8`）。
++ **TLS MITM 失败回退到 relay**：当 MITM 握手失败时不再整体失败，而是回退到透明 relay，保证连通性。`fix(ssl): TLS MITM失败时回退到relay模式`（`234b4f4`）。
++ **子窗口画面拉伸**：子窗口 `FutureWidget` 添加 `loading: true`，保证引擎第一帧渲染树非空，修复画面拉伸。`fix: 子窗口futureWidget添加loading:true`（`5c76709`）。
++ **子窗口防重复打开**：避免多次点击同一菜单项打开重复子窗口。同时清空 debug 日志。`fix: 子窗口防重复打开+debug日志清空+画面拉伸修复`（`9e71aee`）。
++ **Windows 协程废弃警告**：添加 `_SILENCE_EXPERIMENTAL_COROUTINE_DEPRECATION_WARNINGS` 宏，屏蔽来自 Flutter 协程 API 的废弃警告，CI 日志更干净。`fix(windows): 添加 _SILENCE_EXPERIMENTAL_COROUTINE_DEPRECATION_WARNINGS 宏`（`0ff220b`）。
+
+#### 变更 / 重构
+
++ **UI 统一样式**：下拉框、弹窗、菜单统一使用 `surface + 8% 主题色叠加` 背景。`style: 统一下拉框/弹窗/菜单样式`（`08cd7c4`）/ `style: 优化搜索弹窗和搜索框样式`（`f3df642`）。
++ **CI 简化为 Windows-only**：`release.yml` 移除 Android job 简化流程；同步移除 Inno Setup 中的 ChineseSimplified.isl。`1dea442` / `87c740b`。
++ **CI 引入 GitHub Actions Windows 构建**：自动编译 Windows 包。`ci: add GitHub Actions workflow for Windows builds`（`e2f687e`）。
++ **SSL 调试日志**：在 SSL/TLS/SOCKS5 关键路径添加 `[SSL-DEBUG]` 日志，便于排查握手问题。`b958e5d`。
++ **同步 origin-proxypin 历史**：将早期 origin-proxypin 上的 MITM 证书修复（SKI/AKI 扩展、KeyUsage 编码、CA 链）合并到 mcp-main。`528b673` / `83da169`。
++ **测试文件清理**：移除仓库中的调试测试文件和测试 API 脚本。`chore: 清理调试文件`（`3954e50`）。
++ **测试脚本同步**：`test_deep_api.py` 改用 urllib3 + 自定义 SSL context 以适配新的 MITM 证书链。`fix: 更新 test_deep_api.py 使用 urllib3 + 自定义 SSL context`（`f66cc72`）。
+
+#### 文档
+
++ **README 改为中文**：增加破坏性变更和更新日志章节。`docs: README 改为中文`（`1384038`）/ `9915d42`。
++ **补充快速调试/已知问题/Claude 抓包/ProxyBridge/端口调整/版本号**等章节。`docs: 补充快速调试/已知问题/Claude抓包/proxybridge/端口调整/版本号`（`4e4f816`）。
+
+#### 说明
+
+`updating` 与 `main` 已在交付时 reset 对齐上游（`61c915e`）。本节为 fork 历史回顾，不影响当前工作树状态。具体代码差异以 commit hash 为准——本节与同步自上游 main 段（若存在）解耦，仅反映 `updating` 分支自 fork 以来的累积。
+
+---
 
 ## MCP 核心功能
 
