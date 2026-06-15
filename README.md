@@ -112,9 +112,9 @@
 + **`dart:io HttpHeaders` 无 `toList()` 方法**：MCP 工具读取响应头时调用 `HttpHeaders.toList()` 报错。改用 `headers.entries` 正确遍历。`fix(mcp): fix dart:io HttpHeaders has no toList() method`（`b47d789`）。
 + **`StreamController` 未关闭导致内存泄漏**：`ProxyServer` 添加 `dispose` 方法关闭 StreamController。`ff89ca1`（ISSUE-01）。
 + **`_buildConfigGuide` 重复调用 `McpTools.getToolDefinitions`**：消除每次构建引导时重复的元数据拉取，降低不必要的 CPU 开销。`0d7e7c4`（ISSUE-02）。
-+ **OpenSSL 证书验证失败**（与 1.2.8 段互补，此处简述 fork 侧前置修复）：SKI 双层 OCTET STRING 编码、KeyUsage 常量 MSB-first 顺序、CA 自签名 AKI 使用自身 SKI、`generateNewRootCA` 自动刷新配置、移除 `post_handshake_auth` 跳过逻辑。`34af26b` / `58237bb` / `5683571`。
++ **OpenSSL 证书验证失败**（与 1.2.8 段互补，此处简述 fork 侧前置修复）：SKI 双层 OCTET STRING 编码、KeyUsage 常量 MSB-first 顺序、CA 自签名 AKI 使用自身 SKI、`generateNewRootCA` 自动刷新配置。`34af26b` / `58237bb`。注：同期曾尝试以 `hasPostHandshakeAuth` 检测扩展后跳过 MITM（`d77b98d`），但该策略被 `5683571` 撤销——MITM 应始终尝试，不因扩展名跳过。
 + **SOCKS5 + TLS HandshakeException**：SOCKS5 场景下主动创建 upstream channel 修复 `HandshakeException`；并修正一处提前创建 channel 导致的副作用。`fix(ssl): SOCKS5 场景下主动创建 upstream channel`（`973ffc1`）/ `fix(ssl): 移除SOCKS5路径下提前创建upstream channel`（`c347fe8`）。
-+ **TLS MITM 失败回退到 relay**：当 MITM 握手失败时不再整体失败，而是回退到透明 relay，保证连通性。`fix(ssl): TLS MITM失败时回退到relay模式`（`234b4f4`）。
++ **MITM 失败 catch 块兜底回退到 relay**：`ssl()` 捕获 `HandshakeException` 时自动回退到 TCP 透明 relay，保证连通性。`fix(ssl): TLS MITM失败时回退到relay模式`（`234b4f4`）。这是当前唯一保留的 TLS 失败兜底策略——`hasPostHandshakeAuth` 扩展检测跳过 MITM 的方案（`d77b98d`）已被 `5683571` 撤销。
 + **子窗口画面拉伸**：子窗口 `FutureWidget` 添加 `loading: true`，保证引擎第一帧渲染树非空，修复画面拉伸。`fix: 子窗口futureWidget添加loading:true`（`5c76709`）。
 + **子窗口防重复打开**：避免多次点击同一菜单项打开重复子窗口。同时清空 debug 日志。`fix: 子窗口防重复打开+debug日志清空+画面拉伸修复`（`9e71aee`）。
 + **Windows 协程废弃警告**：添加 `_SILENCE_EXPERIMENTAL_COROUTINE_DEPRECATION_WARNINGS` 宏，屏蔽来自 Flutter 协程 API 的废弃警告，CI 日志更干净。`fix(windows): 添加 _SILENCE_EXPERIMENTAL_COROUTINE_DEPRECATION_WARNINGS 宏`（`0ff220b`）。
@@ -136,7 +136,7 @@
 
 #### 说明
 
-`updating` 与 `main` 已在交付时 reset 对齐上游（`61c915e`）。本节为 fork 历史回顾，不影响当前工作树状态。具体代码差异以 commit hash 为准——本节与同步自上游 main 段（若存在）解耦，仅反映 `updating` 分支自 fork 以来的累积。
+本节为 `updating` 分支自 fork 以来的累积变更回顾。当前 `updating` HEAD 仍领先 `main`（已 reset 对齐上游 `61c915e`）约 135 个文件 / 7149 行 fork 自有变更，本节覆盖其中需要记录的功能与修复。具体代码差异以 commit hash 为准。
 
 ---
 
