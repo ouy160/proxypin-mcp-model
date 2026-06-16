@@ -49,14 +49,13 @@ class _PhoneConnectState extends State<PhoneConnect> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-        backgroundColor: Colors.transparent,
-        contentPadding: EdgeInsets.zero,
-        titlePadding: EdgeInsets.zero,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10.0)),
-        content: TintedSurface(
+      backgroundColor: Colors.transparent,
+      contentPadding: EdgeInsets.zero,
+      titlePadding: EdgeInsets.zero,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10.0)),
+      content: TintedSurface(
           padding: const EdgeInsets.all(10),
           child: SizedBox(
-              height: 300,
               width: 300,
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -65,8 +64,7 @@ class _PhoneConnectState extends State<PhoneConnect> {
                     Padding(
                         padding: const EdgeInsets.only(left: 10, top: 6),
                         child: Text(localizations.mobileConnect, style: const TextStyle(fontSize: 18))),
-                    const Expanded(
-                        child: Align(alignment: Alignment.topRight, child: CloseButton()))
+                    const Expanded(child: Align(alignment: Alignment.topRight, child: CloseButton()))
                   ]),
                   if (widget.proxyServer.isRunning)
                     QrImageView(
