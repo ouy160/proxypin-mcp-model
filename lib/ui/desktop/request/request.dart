@@ -31,7 +31,6 @@ import 'package:proxypin/network/http/http_client.dart';
 import 'package:proxypin/network/util/cache.dart';
 import 'package:proxypin/storage/favorites.dart';
 import 'package:proxypin/ui/component/multi_select_controller.dart';
-import 'package:proxypin/ui/component/multi_window.dart';
 import 'package:proxypin/ui/component/utils.dart';
 import 'package:proxypin/ui/component/widgets.dart';
 import 'package:proxypin/ui/configuration.dart';
@@ -505,17 +504,23 @@ class _RequestWidgetState extends State<RequestWidget> {
       ..show();
   }
 
-  // 新窗口打开详情
-  void openDetailInNewWindow() async {
-    MultiWindow.openWindow(
-      localizations.captureDetail,
-      'RequestDetailPage',
-      args: {
-        'request': widget.request,
-        'response': widget.request.response ?? widget.response.get(),
-      },
-      size: Size(850, 900),
-    );
+  // 新窗口打开详情（绕过 MultiWindow.openWindow 的单例缓存，与 requestEdit 行为一致，支持多次打开）
+  Future<void> openDetailInNewWindow() async {
+    var ratio = 1.0;
+    if (Platform.isWindows) {
+      ratio = WindowManager.instance.getDevicePixelRatio();
+    }
+
+    final response = widget.request.response ?? widget.response.get();
+    final window = await DesktopMultiWindow.createWindow(jsonEncode(
+      {'name': 'RequestDetailPage', 'request': widget.request, 'response': response},
+    ));
+
+    window.setTitle(localizations.captureDetail);
+    window
+      ..setFrame(const Offset(100, 100) & Size(850 * ratio, 900 * ratio))
+      ..center()
+      ..show();
   }
 
   //点击事件
