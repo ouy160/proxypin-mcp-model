@@ -123,6 +123,9 @@ abstract class HttpCodec<T extends HttpMessage> implements Codec<T, T> {
         if (!resolveBody || bodyResult?.isDone == true) {
           _state = State.done;
           result.data!.body = bodyResult?.body;
+        } else if (bodyResult != null && bodyResult.body != null) {
+          // For SSE streams (isDone=false but body available), still set body for UI display
+          result.data!.body = bodyResult.body;
         }
 
         //If the body does not support parsing, forward directly

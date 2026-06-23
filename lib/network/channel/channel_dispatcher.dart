@@ -127,6 +127,34 @@ class ChannelDispatcher extends ChannelHandler<Uint8List> {
         }
       }
 
+      // 修复：即使 isDone=false，当收到 HttpResponse 头时也要调用 onResponse
+      // 这样 SSE 流可以在后续数据到达时正确通知 UI
+      if (decodeResult.data is HttpResponse) {
+        var response = decodeResult.data as HttpResponse;
+        var isSSE = response.headers.contentType.toLowerCase().startsWith('text/event-stream');
+        logger.d("[channelRead] SSE check: isSSE=$isSSE, isDone=${decodeResult.isDone}, data=${decodeResult.data}, remoteChannel=${remoteChannel != null}");
+        
+        response.request ??= channelContext.currentRequest;
+        channelContext.currentRequest?.response = response;
+        channelContext.listener?.onResponse(channelContext, response);
+
+        // SSE 流需要在 isDone=false 时仍然发送响应头给客户端
+        // 否则客户端收不到任何响应
+        if (!decodeResult.isDone && remoteChannel != null) {
+          logger.d("[channelRead] SSE detected, setting up SSE streaming");
+          // remoteChannel 是客户端连接，发送响应给客户端
+          remoteChannel.write(channelContext, response);
+          
+          // 设置后续数据流的处理：
+          // 1. channel (客户端) -> SseChannelHandler (解析 SSE 并更新 UI)
+          // 2. remoteChannel (远程) -> RelayHandler (转发数据)
+          var rawCodec = RawCodec();
+          channel.dispatcher.channelHandle(rawCodec, SseChannelHandler(remoteChannel, response));
+          remoteChannel.dispatcher.channelHandle(rawCodec, RelayHandler(channel));
+          return;
+        }
+      }
+
       if (!decodeResult.isDone) {
         return;
       }
