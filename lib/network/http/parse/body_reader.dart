@@ -56,9 +56,15 @@ class BodyReader {
 
     _offset = 0;
 
-    if (message.headers.contentType == 'video/x-flv' || message.headers.contentType.startsWith("text/event-stream")) {
-      // For SSE streams, forward raw bytes - chunked encoding and Brotli decompression
-      // will be handled at the SseChannelHandler level where data can be accumulated
+    // SSE 流：返回 supportedParse=true, is_done=false
+    // 让正常流程持续处理后续数据，不会触发 notSupportedForward 中断
+    if (message.headers.contentType.startsWith("text/event-stream")) {
+      _bodyBuffer.add(data);
+      return Result(false, supportedParse: true, body: _bodyBuffer.toBytes());
+    }
+    // FLV 仍然使用原来的逻辑
+    if (message.headers.contentType == 'video/x-flv') {
+      //Directly forward without processing for now
       return Result(false, supportedParse: false, body: data);
     }
 
