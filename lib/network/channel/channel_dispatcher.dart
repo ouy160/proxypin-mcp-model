@@ -89,7 +89,6 @@ class ChannelDispatcher extends ChannelHandler<Uint8List> {
     //手机扫码连接转发远程
     HostAndPort? remote = channelContext.getAttribute(AttributeKeys.remote);
     buffer.add(msg);
-
     try {
       if (remote != null) {
         await remoteForward(channelContext, remote);
@@ -144,13 +143,22 @@ class ChannelDispatcher extends ChannelHandler<Uint8List> {
           logger.d("[channelRead] SSE detected, setting up SSE streaming");
           // remoteChannel 是客户端连接，发送响应给客户端
           remoteChannel.write(channelContext, response);
-          
+
           // 设置后续数据流的处理：
-          // 1. channel (客户端) -> SseChannelHandler (解析 SSE 并更新 UI)
-          // 2. remoteChannel (远程) -> RelayHandler (转发数据)
+          // 1. channel (服务端) -> SseChannelHandler -> remoteChannel (客户端)
+          // 2. remoteChannel (客户端) -> RelayHandler -> channel (服务端)
           var rawCodec = RawCodec();
           channel.dispatcher.channelHandle(rawCodec, SseChannelHandler(remoteChannel, response));
           remoteChannel.dispatcher.channelHandle(rawCodec, RelayHandler(channel));
+
+          // 关键修复：HTTP 头和初始 body 可能在同一个 TCP 包中到达（如 707字节包含 600头 + 100body）。
+          // SSE 流的 supportedParse=true，所以 decodeResult.forward 为 null，
+          // 导致初始 body 数据没有被转发到客户端，造成 brotli 流不完整。
+          // 把初始 body 显式转发给 SseChannelHandler 来处理（它会转发给客户端）。
+          if (response.body != null && response.body!.isNotEmpty) {
+            logger.d("[channelRead] SSE: forwarding initial body ${response.body!.length} bytes to handler");
+            (channel.dispatcher.handler as ChannelHandler).channelRead(channelContext, channel, Uint8List.fromList(response.body!));
+          }
           return;
         }
       }
