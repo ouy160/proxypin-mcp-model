@@ -28,6 +28,7 @@ import 'package:proxypin/network/components/manager/request_rewrite_manager.dart
 import 'package:proxypin/network/components/manager/rewrite_rule.dart';
 import 'package:proxypin/network/http/content_type.dart';
 import 'package:proxypin/network/http/http.dart';
+import 'package:proxypin/network/http/websocket.dart';
 import 'package:proxypin/network/util/logger.dart';
 import 'package:proxypin/ui/component/json/json_viewer.dart';
 import 'package:proxypin/ui/component/json/theme.dart';
@@ -588,9 +589,15 @@ class _BodyState extends State<_Body> {
     final message = _effectiveMessage(parent);
 
     if (message?.isWebSocket == true ||
-        (message?.contentType == ContentType.sse && message?.messages.isNotEmpty == true)) {
-      List<Widget>? list = message?.messages
-          .map((e) => Container(
+        (message?.contentType == ContentType.sse)) {
+      // 使用 ValueListenableBuilder 监听 SSE/WebSocket 消息更新
+      return ValueListenableBuilder<List<WebSocketFrame>>(
+        valueListenable: message!.messagesNotifier,
+        builder: (context, messages, child) {
+          if (messages.isEmpty) {
+            return const SizedBox();
+          }
+          final list = messages.map((e) => Container(
               margin: const EdgeInsets.only(top: 2, bottom: 2),
               child: Row(
                 children: [
@@ -601,18 +608,19 @@ class _BodyState extends State<_Body> {
                       child: SelectionContainer.disabled(
                           child: Text(e.time.format(), style: const TextStyle(fontSize: 12, color: Colors.grey))))
                 ],
-              )))
-          .toList();
-      return Column(
-        children: [
-          const SelectionContainer.disabled(
-              child: Row(children: [
-            Expanded(child: Text("Data")),
-            SizedBox(width: 130, child: Text("Time")),
-          ])),
-          Divider(height: 5, thickness: 1, color: Colors.grey[300]),
-          ...list ?? []
-        ],
+              ))).toList();
+          return Column(
+            children: [
+              const SelectionContainer.disabled(
+                  child: Row(children: [
+                Expanded(child: Text("Data")),
+                SizedBox(width: 130, child: Text("Time")),
+              ])),
+              Divider(height: 5, thickness: 1, color: Colors.grey[300]),
+              ...list
+            ],
+          );
+        },
       );
     }
 

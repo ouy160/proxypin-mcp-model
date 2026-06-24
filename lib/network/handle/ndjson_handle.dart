@@ -84,7 +84,7 @@ class NdjsonChannelHandler extends ChannelHandler<Uint8List> {
       final frames = decoder.feed(msg);
       for (final WebSocketFrame frame in frames) {
         frame.isFromClient = message is HttpRequest;
-        message.messages.add(frame);
+        message.addMessage(frame);
         channelContext.listener?.onMessage(channel, message, frame);
         logger.d(
             '[${channelContext.clientChannel?.id}] ndjson channelRead ${frame.payloadLength} ${frame.payloadDataAsString}');

@@ -28,10 +28,9 @@ class WebSocketChannelHandler extends ChannelHandler<Uint8List> {
       return;
     }
     frame.isFromClient = message is HttpRequest;
-
-    message.messages.add(frame);
-    channelContext.listener?.onMessage(channel, message, frame);
-    logger.d(
-        "[${channelContext.clientChannel?.id}] websocket channelRead ${frame.payloadLength} ${frame.fin} ${frame.payloadDataAsString}");
+        message.addMessage(frame);
+        channelContext.listener?.onMessage(channel, message, frame);
+        logger.d(
+            "[${channelContext.clientChannel?.id}] websocket channelRead ${frame.payloadLength} ${frame.fin} ${frame.payloadDataAsString}");
   }
 }

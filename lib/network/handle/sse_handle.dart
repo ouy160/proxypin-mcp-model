@@ -130,11 +130,17 @@ class SseChannelHandler extends ChannelHandler<Uint8List> {
     try {
       final frames = decoder.feed(data);
       logger.d("[SseChannelHandler] decoded ${frames.length} SSE frames");
-      for (final WebSocketFrame frame in frames) {
-        frame.isFromClient = message is HttpRequest;
-        message.messages.add(frame);
-        channelContext.listener?.onMessage(channel, message, frame);
-        logger.d("[${channelContext.clientChannel?.id}] sse frame ${frame.payloadLength} bytes: ${frame.payloadDataAsString.substring(0, frame.payloadDataAsString.length > 80 ? 80 : frame.payloadDataAsString.length)}");
+      if (frames.isNotEmpty) {
+        for (final WebSocketFrame frame in frames) {
+          frame.isFromClient = message is HttpRequest;
+        }
+        // 批量添加，只触发一次 UI 更新
+        message.addMessages(frames);
+        // 通知每个帧
+        for (final WebSocketFrame frame in frames) {
+          channelContext.listener?.onMessage(channel, message, frame);
+          logger.d("[${channelContext.clientChannel?.id}] sse frame ${frame.payloadLength} bytes: ${frame.payloadDataAsString.substring(0, frame.payloadDataAsString.length > 80 ? 80 : frame.payloadDataAsString.length)}");
+        }
       }
     } catch (e, stackTrace) {
       log.e("sse decode error", error: e, stackTrace: stackTrace);

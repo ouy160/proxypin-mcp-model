@@ -49,3 +49,5 @@ l10n_errors.txt
 pubspec.lock
 /dist/
 .ace-tool/
+
+test/test_minimax_api.py

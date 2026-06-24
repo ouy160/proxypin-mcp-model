@@ -279,10 +279,9 @@ class RequestParams extends StatelessWidget {
 
 class General extends StatelessWidget {
   final ValueWrap<HttpRequest> request;
-
   final ValueWrap<HttpResponse> response;
 
-  const General(this.request, this.response, {super.key});
+  General(this.request, this.response, {super.key});
 
   @override
   Widget build(BuildContext context) {

@@ -16,6 +16,7 @@
 
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:proxypin/network/channel/host_port.dart';
 import 'package:proxypin/network/http/content_type.dart';
 import 'package:proxypin/network/http/websocket.dart';
@@ -173,7 +174,25 @@ abstract class HttpMessage {
 
   List<String> get cookies => headers.cookies;
 
-  List<WebSocketFrame> messages = [];
+  // SSE/WebSocket 消息列表，使用 ValueNotifier 以支持流式更新
+  final ValueNotifier<List<WebSocketFrame>> messagesNotifier = ValueNotifier<List<WebSocketFrame>>([]);
+  
+  List<WebSocketFrame> get messages => messagesNotifier.value;
+  
+  set messages(List<WebSocketFrame> value) {
+    messagesNotifier.value = value;
+  }
+  
+  // 供外部添加消息，会自动通知监听者
+  void addMessage(WebSocketFrame frame) {
+    messagesNotifier.value = [...messagesNotifier.value, frame];
+  }
+  
+  // 批量添加消息，只触发一次通知
+  void addMessages(List<WebSocketFrame> frames) {
+    if (frames.isEmpty) return;
+    messagesNotifier.value = [...messagesNotifier.value, ...frames];
+  }
 }
 
 ///HTTP请求。
