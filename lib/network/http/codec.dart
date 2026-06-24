@@ -155,6 +155,7 @@ abstract class HttpCodec<T extends HttpMessage> implements Codec<T, T> {
   void init() {
     bodyReader = null;
     result = DecoderResult(isDone: false);
+    _state = State.readInitial;
   }
 
   void initialLine(BytesBuilder buffer, T message);
@@ -313,5 +314,13 @@ class HttpClientCodec extends Codec<HttpResponse, HttpRequest> {
   @override
   List<int> encode(ChannelContext channelContext, HttpRequest data) {
     return requestCodec.encode(channelContext, data);
+  }
+
+  /// 重置 codec 状态
+  /// 这是关键的修复：SSE 流期间 codec 的 _state 保持 State.body，
+  /// 必须重置为 State.readInitial，否则下一个响应的 headers 会被错误处理
+  void init() {
+    requestCodec.init();
+    responseCodec.init();
   }
 }

@@ -5,6 +5,8 @@ import 'dart:convert';
 import 'package:es_compression/brotli.dart';
 import 'package:proxypin/network/channel/channel.dart';
 import 'package:proxypin/network/channel/channel_context.dart';
+import 'package:proxypin/network/channel/channel_dispatcher.dart';
+import 'package:proxypin/network/handle/relay_handle.dart';
 import 'package:proxypin/network/http/http.dart';
 import 'package:proxypin/network/http/sse.dart';
 import 'package:proxypin/network/http/websocket.dart';
@@ -25,13 +27,26 @@ class SseChannelHandler extends ChannelHandler<Uint8List> {
   BrotliDecoder? _brotliDecoder;
   ByteConversionSink? _brotliSink;
   final List<int> _brotliOutput = [];
-
   // Accumulated decompressed data waiting to be fed to SSE decoder
   final BytesBuilder _decompressedAccumulated = BytesBuilder();
 
-  SseChannelHandler(this.proxyChannel, this.message) {
-    // SSE streams (text/event-stream) are always chunked per HTTP/1.1 spec,
-    // even if Transfer-Encoding: chunked header is not explicitly present
+  // 保存 channel (服务端连接) 和 remoteChannel (客户端连接) 的原始 dispatcher 状态
+  // SSE 流结束后需要恢复，让后续 keep-alive 请求能正常被解析和添加到请求列表
+  // 使用 dynamic 类型避免导入额外的 codec 模块
+  final dynamic _channelOriginalDecoder;
+  final dynamic _channelOriginalEncoder;
+  final ChannelHandler? _channelOriginalHandler;
+  final dynamic _remoteChannelOriginalDecoder;
+  final dynamic _remoteChannelOriginalEncoder;
+  final ChannelHandler? _remoteChannelOriginalHandler;
+
+  SseChannelHandler(this.proxyChannel, this.message,
+      [this._channelOriginalDecoder,
+       this._channelOriginalEncoder,
+       this._channelOriginalHandler,
+       this._remoteChannelOriginalDecoder,
+       this._remoteChannelOriginalEncoder,
+       this._remoteChannelOriginalHandler]) {
     _isChunked = message.headers.isChunked ||
         message.headers.contentType.toLowerCase().contains('text/event-stream');
     _isBrotli = message.headers.contentEncoding == 'br';
@@ -52,6 +67,20 @@ class SseChannelHandler extends ChannelHandler<Uint8List> {
   Future<void> channelRead(ChannelContext channelContext, Channel channel, Uint8List msg) async {
     logger.d("[SseChannelHandler] channelRead called with ${msg.length} bytes, chunked=$_isChunked brotli=$_isBrotli");
 
+    // 关键修复：检测 chunked 结束标记 "0\r\n\r\n"
+    // 如果检测到，立即恢复 channel.dispatcher 到原始状态
+    // 否则后续请求的响应会被错误地作为 SSE 流处理
+    bool isChunkedEnd = _isChunkedEndMarker(msg);
+    if (isChunkedEnd) {
+      logger.d("[SseChannelHandler] detected chunked end marker (0\\r\\n\\r\\n) in ${msg.length} bytes");
+      // 转发原始字节到客户端
+      proxyChannel.writeBytes(msg);
+      // 恢复 channel.dispatcher 到原始状态，并重置 codec 状态
+      // 这是关键修复：SSE 流期间 codec 的 _state 保持 State.body，
+      // 必须重置为 State.readInitial，否则下一个响应的 headers 会被错误处理
+      _restoreDispatcher(channel);
+      return;
+    }
     // IMPORTANT: Forward ORIGINAL chunked-encoded data to client FIRST
     // because client expects chunked-encoded data (HTTP headers contain Transfer-Encoding: chunked)
     proxyChannel.writeBytes(msg);
@@ -168,11 +197,70 @@ class SseChannelHandler extends ChannelHandler<Uint8List> {
       }
     }
 
-    proxyChannel.close();
-    super.channelInactive(channelContext, channel);
+    // 不关闭 proxyChannel，保持 keep-alive 连接
+    // HttpResponseProxyHandler.channelInactive 会处理 clientChannel 关闭
   }
 
-  /// Detect if data looks like chunked transfer encoding
+  /// 恢复 channel (服务端连接) 和 remoteChannel (客户端连接) 的 dispatcher 到原始状态
+  /// 这是 SSE 流结束后必须做的关键修复：
+  /// - channel 恢复为 HttpClientCodec + HttpResponseProxyHandler (能解析 HTTP 响应)
+  /// - remoteChannel 恢复为 HttpRequestCodec + HttpResponseCodec + HttpProxyChannelHandler
+  ///   (能解析 HTTP 请求，触发 onRequest 事件，请求列表就会显示)
+  /// 同时重置 codec 状态：SSE 流期间 codec 的 _state 一直保持 State.body，
+  /// 必须重置为 State.readInitial，否则下一个响应的 headers 会被错误处理
+  void _restoreDispatcher(Channel channel) {
+    // 恢复 channel (服务端连接) 的原始状态
+    if (_channelOriginalDecoder != null && _channelOriginalEncoder != null && _channelOriginalHandler != null) {
+      channel.dispatcher.handle(_channelOriginalDecoder!, _channelOriginalEncoder!, _channelOriginalHandler!);
+      // 重置 codec 状态：SSE 流期间 codec 的 _state 一直保持 State.body，
+      // 必须重置为 State.readInitial。这是最关键的修复！
+      _resetCodecState(_channelOriginalDecoder!);
+      logger.d("[SseChannelHandler] restored channel.dispatcher to original state "
+          "(decoder=${_channelOriginalDecoder.runtimeType} handler=${_channelOriginalHandler.runtimeType})");
+    }
+    // 恢复 remoteChannel (客户端连接) 的原始状态
+    if (_remoteChannelOriginalDecoder != null && _remoteChannelOriginalEncoder != null && _remoteChannelOriginalHandler != null) {
+      proxyChannel.dispatcher.handle(_remoteChannelOriginalDecoder!, _remoteChannelOriginalEncoder!, _remoteChannelOriginalHandler!);
+      // 重置 codec 状态
+      _resetCodecState(_remoteChannelOriginalDecoder!);
+      logger.d("[SseChannelHandler] restored proxyChannel.dispatcher to original state "
+          "(decoder=${_remoteChannelOriginalDecoder.runtimeType} handler=${_remoteChannelOriginalHandler.runtimeType})");
+    }
+  }
+
+  /// 重置 codec 状态，让 codec 准备好解析新消息
+  /// 这是关键的修复：HttpCodec 在 SSE 流期间 _state 保持 State.body，
+  /// 必须重置为 State.readInitial，否则下一个响应的 headers 会被错误处理
+  void _resetCodecState(dynamic codec) {
+    if (codec == null) return;
+    try {
+      // 调用 codec 的 init() 方法重置状态
+      final initMethod = codec.runtimeType.toString();
+      // 通过反射调用 init 方法
+      final dynamic result = (codec as dynamic).init?.call();
+      logger.d("[SseChannelHandler] reset codec state for $initMethod, result=$result");
+    } catch (e) {
+      logger.w("[SseChannelHandler] reset codec state error: $e");
+    }
+  }
+
+  /// 检测 chunked transfer encoding 结束标记 "0\r\n\r\n"
+  /// 当 SSE 流结束（chunked 编码完成）时，标记会出现
+  bool _isChunkedEndMarker(Uint8List data) {
+    // 查找 "0\r\n\r\n" 模式 (5 字节)
+    for (int i = 0; i <= data.length - 5; i++) {
+      if (data[i] == 0x30 && // '0'
+          data[i + 1] == 0x0d && // \r
+          data[i + 2] == 0x0a && // \n
+          data[i + 3] == 0x0d && // \r
+          data[i + 4] == 0x0a) // \n
+      {
+        return true;
+      }
+    }
+    return false;
+  }
+
   /// Heuristic: data starts with hex digits followed by \r\n
   bool _looksLikeChunkedData(Uint8List data) {
     if (data.length < 5) return false;

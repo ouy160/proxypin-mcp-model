@@ -147,13 +147,21 @@ class ChannelDispatcher extends ChannelHandler<Uint8List> {
           // 设置后续数据流的处理：
           // 1. channel (服务端) -> SseChannelHandler -> remoteChannel (客户端)
           // 2. remoteChannel (客户端) -> RelayHandler -> channel (服务端)
-          var rawCodec = RawCodec();
-          channel.dispatcher.channelHandle(rawCodec, SseChannelHandler(remoteChannel, response));
-          remoteChannel.dispatcher.channelHandle(rawCodec, RelayHandler(channel));
+          // 保存 channel (服务端连接) 和 remoteChannel (客户端连接) 的原始状态
+          // 这样 SSE 流结束后可以恢复，让后续 keep-alive 请求能正常被解析和添加到列表
+          // channel 原始状态：HttpClientCodec + HttpResponseProxyHandler
+          // remoteChannel 原始状态：HttpRequestCodec + HttpResponseCodec + HttpProxyChannelHandler
+          final channelOriginalDecoder = channel.dispatcher.decoder;
+          final channelOriginalEncoder = channel.dispatcher.encoder;
+          final channelOriginalHandler = channel.dispatcher.handler;
+          final remoteChannelOriginalDecoder = remoteChannel.dispatcher.decoder;
+          final remoteChannelOriginalEncoder = remoteChannel.dispatcher.encoder;
+          final remoteChannelOriginalHandler = remoteChannel.dispatcher.handler;
 
-          // 关键修复：HTTP 头和初始 body 可能在同一个 TCP 包中到达（如 707字节包含 600头 + 100body）。
-          // SSE 流的 supportedParse=true，所以 decodeResult.forward 为 null，
-          // 导致初始 body 数据没有被转发到客户端，造成 brotli 流不完整。
+          var rawCodec = RawCodec();
+          channel.dispatcher.channelHandle(
+              rawCodec, SseChannelHandler(remoteChannel, response, channelOriginalDecoder, channelOriginalEncoder, channelOriginalHandler, remoteChannelOriginalDecoder, remoteChannelOriginalEncoder, remoteChannelOriginalHandler));
+          remoteChannel.dispatcher.channelHandle(rawCodec, RelayHandler(channel));
           // 把初始 body 显式转发给 SseChannelHandler 来处理（它会转发给客户端）。
           if (response.body != null && response.body!.isNotEmpty) {
             logger.d("[channelRead] SSE: forwarding initial body ${response.body!.length} bytes to handler");
