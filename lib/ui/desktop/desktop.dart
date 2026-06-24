@@ -26,6 +26,7 @@ import 'package:proxypin/network/channel/channel.dart';
 import 'package:proxypin/network/channel/channel_context.dart';
 import 'package:proxypin/network/http/http.dart';
 import 'package:proxypin/network/http/websocket.dart';
+import 'package:proxypin/network/util/logger.dart';
 import 'package:proxypin/storage/histories.dart';
 import 'package:proxypin/ui/component/memory_cleanup.dart';
 import 'package:proxypin/ui/component/widgets.dart';
@@ -98,8 +99,40 @@ class _DesktopHomePagePageState extends State<DesktopHomePage> implements EventL
 
   @override
   void onMessage(Channel channel, HttpMessage message, WebSocketFrame frame) {
-    if (panel.request.get() == message || panel.response.get() == message) {
-      panel.changeState();
+    logger.d("[DesktopHomePage] onMessage: message=${message.hashCode} panel.response=${panel.response.get()?.hashCode} panel.request=${panel.request.get()?.hashCode}");
+    
+    // 检查是否是 SSE 或 WebSocket 消息
+    bool isStreamMessage = message.isWebSocket || 
+        message.headers.contentType.toLowerCase().startsWith('text/event-stream');
+    
+    if (isStreamMessage) {
+      // 对于 SSE/WebSocket 消息，检查当前 Tab
+      if (panel.isSseTabVisible) {
+        // 如果当前在 SSE/WebSocket Tab，更新消息引用并刷新
+        panel.updateForStreamMessage(message);
+        logger.d("[DesktopHomePage] onMessage: SSE/WebSocket tab visible, triggering changeState");
+      } else {
+        // 如果不在 SSE Tab，只更新消息引用（但不触发刷新）
+        // 这样当用户切换到 SSE Tab 时，数据已经准备好
+        if (message is HttpRequest) {
+          panel.request.set(message);
+          if (message.response != null) {
+            panel.response.set(message.response);
+          }
+        } else if (message is HttpResponse) {
+          panel.response.set(message);
+          if (message.request != null) {
+            panel.request.set(message.request);
+          }
+        }
+        logger.d("[DesktopHomePage] onMessage: SSE/WebSocket message received but tab not visible, updating references only");
+      }
+    } else {
+      // 对于普通消息，使用原有逻辑
+      if (panel.request.get() == message || panel.response.get() == message) {
+        logger.d("[DesktopHomePage] onMessage: triggering changeState");
+        panel.changeState();
+      }
     }
   }
 

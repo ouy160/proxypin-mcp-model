@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:typed_data';
 import 'dart:convert';
 
-import 'package:brotli/brotli.dart';
+import 'package:es_compression/brotli.dart';
 import 'package:proxypin/network/channel/channel.dart';
 import 'package:proxypin/network/channel/channel_context.dart';
 import 'package:proxypin/network/http/http.dart';
@@ -21,8 +21,11 @@ class SseChannelHandler extends ChannelHandler<Uint8List> {
   late final bool _isChunked;
   late final bool _isBrotli;
 
-  // Accumulated brotli compressed data waiting to be decompressed
-  final BytesBuilder _brotliAccumulated = BytesBuilder();
+  // 流式 Brotli 解码器（es_compression 库支持真正的流式解压）
+  BrotliDecoder? _brotliDecoder;
+  ByteConversionSink? _brotliSink;
+  final List<int> _brotliOutput = [];
+
   // Accumulated decompressed data waiting to be fed to SSE decoder
   final BytesBuilder _decompressedAccumulated = BytesBuilder();
 
@@ -32,6 +35,14 @@ class SseChannelHandler extends ChannelHandler<Uint8List> {
     _isChunked = message.headers.isChunked ||
         message.headers.contentType.toLowerCase().contains('text/event-stream');
     _isBrotli = message.headers.contentEncoding == 'br';
+
+    // 初始化流式 Brotli 解码器
+    if (_isBrotli) {
+      _brotliDecoder = BrotliDecoder();
+      _brotliSink = _brotliDecoder!.startChunkedConversion(_BrotliOutputSink(_brotliOutput));
+      logger.d("[SseChannelHandler] Using es_compression BrotliDecoder for streaming decompression");
+    }
+
     logger.d("[SseChannelHandler] init: isChunked=$_isChunked isBrotli=$_isBrotli");
     logger.d("[SseChannelHandler] transferEncoding=${message.headers.get('Transfer-Encoding')} contentEncoding=${message.headers.contentEncoding}");
     logger.d("[SseChannelHandler] headers: ${message.headers.headerLines()}");
@@ -57,13 +68,18 @@ class SseChannelHandler extends ChannelHandler<Uint8List> {
       }
     }
 
-    // If brotli compressed, accumulate and try to decompress
-    if (_isBrotli) {
-      _brotliAccumulated.add(dataToDecode);
-      logger.d("[SseChannelHandler] Brotli accumulated: ${_brotliAccumulated.length} bytes");
+    // If brotli compressed, decompress using streaming decoder
+    if (_isBrotli && _brotliSink != null) {
+      // 使用 es_compression 的流式解码器实时解压
+      _brotliSink!.add(dataToDecode);
 
-      // Try to decompress - if it fails (incomplete data), keep accumulating
-      _tryDecompress(channelContext, channel);
+      // 处理已解码的数据
+      if (_brotliOutput.isNotEmpty) {
+        final decoded = Uint8List.fromList(_brotliOutput);
+        _brotliOutput.clear();
+        logger.d("[SseChannelHandler] es_compression Brotli decoded: ${decoded.length} bytes");
+        _processDecompressedData(channelContext, channel, decoded);
+      }
     }
 
     // Update message body with decoded content for text display
@@ -76,52 +92,41 @@ class SseChannelHandler extends ChannelHandler<Uint8List> {
         message.body = existing;
       }
     }
-
     // For non-brotli, decode SSE messages directly
-    _decodeSseAndNotify(channelContext, channel, dataToDecode);
-  }
-
-  void _tryDecompress(ChannelContext channelContext, Channel channel) {
-    Uint8List accumulated = _brotliAccumulated.toBytes();
-
-    // Try to decompress; if it fails (incomplete data), keep accumulating
-    try {
-      List<int> decompressed = brotli.decode(accumulated);
-      Uint8List decoded = Uint8List.fromList(decompressed);
-      logger.d("[SseChannelHandler] Brotli decompressed: ${decoded.length} bytes from ${accumulated.length} compressed");
-
-      // Clear accumulated (assume brotli stream consumed all input)
-      _brotliAccumulated.clear();
-
-      // Accumulate decoded data
-      _decompressedAccumulated.add(decoded);
-
-      // Process decoded data
-      _processDecompressed(channelContext, channel);
-    } catch (e) {
-      // Data not complete yet, keep accumulating
-      logger.d("[SseChannelHandler] Brotli decompress incomplete, continuing to accumulate (${accumulated.length} bytes): $e");
+    // For brotli, SSE decoding is handled in _processDecompressedData
+    if (!_isBrotli) {
+      _decodeSseAndNotify(channelContext, channel, dataToDecode);
     }
   }
 
-  void _processDecompressed(ChannelContext channelContext, Channel channel) {
-    if (_decompressedAccumulated.isEmpty) return;
+  /// 处理解压后的数据
+  void _processDecompressedData(ChannelContext channelContext, Channel channel, Uint8List decompressedData) {
+    // 累积解压后的数据（用于 SSE 解码）
+    _decompressedAccumulated.add(decompressedData);
 
-    Uint8List data = _decompressedAccumulated.toBytes();
-    _decompressedAccumulated.clear();
-
-    logger.d("[SseChannelHandler] Processing ${data.length} decompressed bytes");
-
-    // Update message body
+    // 更新 message body
     if (message is HttpResponse) {
       if (message.body == null) {
-        message.body = data.toList();
+        message.body = decompressedData.toList();
       } else {
         List<int> existing = List<int>.from(message.body!);
-        existing.addAll(data);
+        existing.addAll(decompressedData);
         message.body = existing;
       }
     }
+
+    // 处理 SSE 消息
+    _processDecompressed(channelContext, channel);
+  }
+
+  void _processDecompressed(ChannelContext channelContext, Channel channel) {
+    if (_decompressedAccumulated.isEmpty) {
+      logger.d("[SseChannelHandler] _processDecompressed: _decompressedAccumulated is empty, returning");
+      return;
+    }
+    Uint8List data = _decompressedAccumulated.toBytes();
+    _decompressedAccumulated.clear();
+    logger.d("[SseChannelHandler] _processDecompressed: processing ${data.length} bytes, calling _decodeSseAndNotify");
 
     _decodeSseAndNotify(channelContext, channel, data);
   }
@@ -129,17 +134,16 @@ class SseChannelHandler extends ChannelHandler<Uint8List> {
   void _decodeSseAndNotify(ChannelContext channelContext, Channel channel, Uint8List data) {
     try {
       final frames = decoder.feed(data);
-      logger.d("[SseChannelHandler] decoded ${frames.length} SSE frames");
+      logger.d("[SseChannelHandler] _decodeSseAndNotify: decoded ${frames.length} frames from ${data.length} bytes");
       if (frames.isNotEmpty) {
         for (final WebSocketFrame frame in frames) {
           frame.isFromClient = message is HttpRequest;
         }
         // 批量添加，只触发一次 UI 更新
         message.addMessages(frames);
-        // 通知每个帧
+        // 通知每个帧（直接调用，Dart单线程保证在主线程执行）
         for (final WebSocketFrame frame in frames) {
           channelContext.listener?.onMessage(channel, message, frame);
-          logger.d("[${channelContext.clientChannel?.id}] sse frame ${frame.payloadLength} bytes: ${frame.payloadDataAsString.substring(0, frame.payloadDataAsString.length > 80 ? 80 : frame.payloadDataAsString.length)}");
         }
       }
     } catch (e, stackTrace) {
@@ -151,9 +155,17 @@ class SseChannelHandler extends ChannelHandler<Uint8List> {
   void channelInactive(ChannelContext channelContext, Channel channel) async {
     logger.d("[SseChannelHandler] channelInactive");
 
-    // Final decompression attempt for any remaining brotli data
-    if (_isBrotli && _brotliAccumulated.isNotEmpty) {
-      _tryDecompress(channelContext, channel);
+    // 关闭 Brotli 流式解码器，刷新剩余数据
+    if (_isBrotli && _brotliSink != null) {
+      _brotliSink!.close();
+
+      // 处理剩余输出
+      if (_brotliOutput.isNotEmpty) {
+        final decoded = Uint8List.fromList(_brotliOutput);
+        _brotliOutput.clear();
+        logger.d("[SseChannelHandler] es_compression Brotli final flush: ${decoded.length} bytes");
+        _processDecompressedData(channelContext, channel, decoded);
+      }
     }
 
     proxyChannel.close();
@@ -226,5 +238,22 @@ class SseChannelHandler extends ChannelHandler<Uint8List> {
     }
 
     return result.toBytes();
+  }
+}
+
+/// Brotli 输出收集器
+class _BrotliOutputSink implements Sink<List<int>> {
+  final List<int> output;
+
+  _BrotliOutputSink(this.output);
+
+  @override
+  void add(List<int> data) {
+    output.addAll(data);
+  }
+
+  @override
+  void close() {
+    // nothing to do
   }
 }

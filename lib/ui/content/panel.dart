@@ -65,6 +65,29 @@ class NetworkTabController extends StatefulWidget {
     var state = key as GlobalKey<NetworkTabState>;
     state.currentState?.changeState();
   }
+  /// 检查当前 Tab 是否是 SSE/WebSocket Tab（索引 2）
+  bool get isSseTabVisible {
+    var state = key as GlobalKey<NetworkTabState>;
+    return state.currentState?._isSseTabVisible() ?? false;
+  }
+
+  /// 更新 panel 的 request 和 response（用于 SSE/WebSocket 消息自动刷新）
+  void updateForStreamMessage(HttpMessage message) {
+    if (message is HttpRequest) {
+      request.set(message);
+      if (message.response != null) {
+        response.set(message.response);
+      }
+    } else if (message is HttpResponse) {
+      response.set(message);
+      if (message.request != null) {
+        request.set(message.request);
+      }
+    }
+    // 无论当前是否在 SSE Tab，都更新消息引用
+    // 这样当用户切换到 SSE Tab 时，panel 已经包含了正确的消息引用
+    changeState();
+  }
 
   @override
   State<StatefulWidget> createState() {
@@ -90,6 +113,10 @@ class NetworkTabState extends State<NetworkTabController> with SingleTickerProvi
 
   void changeState() {
     setState(() {});
+  }
+  /// 检查当前 Tab 是否是 SSE/WebSocket Tab（索引 2）
+  bool _isSseTabVisible() {
+    return _tabController.index == 2;
   }
 
   AppLocalizations get localizations => AppLocalizations.of(context)!;

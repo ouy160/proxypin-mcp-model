@@ -52,6 +52,9 @@ dependencies:
   vclibs: ^0.1.3
   scrollable_positioned_list_nic: ^0.0.2
   tray_manager: ^0.5.2
+  es_compression: ^2.0.15
+  es_compression_brotli:
+    path: plugins/es_compression_brotli
 
 dev_dependencies:
   flutter_test:

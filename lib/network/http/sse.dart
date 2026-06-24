@@ -98,7 +98,8 @@ class SseDecoder {
     if (event != null && event.isNotEmpty) b.writeln('event: $event');
     if (id != null && id.isNotEmpty) b.writeln('id: $id');
     if (retry != null) b.writeln('retry: $retry');
-    b.write(data);
+    // SSE规范：data行必须以"data:"为前缀
+    b.writeln('data: $data');
     return b.toString();
   }
 
@@ -114,4 +115,3 @@ class SseDecoder {
     );
   }
 }
-
