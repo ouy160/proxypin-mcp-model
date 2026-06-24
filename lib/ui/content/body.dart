@@ -597,18 +597,11 @@ class _BodyState extends State<_Body> {
           if (messages.isEmpty) {
             return const SizedBox();
           }
-          final list = messages.map((e) => Container(
-              margin: const EdgeInsets.only(top: 2, bottom: 2),
-              child: Row(
-                children: [
-                  Expanded(child: Text(e.payloadDataAsString)),
-                  const SizedBox(width: 5),
-                  SizedBox(
-                      width: 130,
-                      child: SelectionContainer.disabled(
-                          child: Text(e.time.format(), style: const TextStyle(fontSize: 12, color: Colors.grey))))
-                ],
-              ))).toList();
+          // 性能修复：使用 ListView.builder 懒构建（虚拟化），避免长 SSE 流消息累积卡死
+          // 原来的 Column + ...list 会在 messages 增长到几千条时一次性构建所有 widget，
+          // 导致每次新消息到达都触发整个列表重建，性能急剧恶化
+          // ListView.builder 只构建可见区域，性能随消息数量线性增长
+          final itemCount = messages.length;
           return Column(
             children: [
               const SelectionContainer.disabled(
@@ -617,7 +610,31 @@ class _BodyState extends State<_Body> {
                 SizedBox(width: 130, child: Text("Time")),
               ])),
               Divider(height: 5, thickness: 1, color: Colors.grey[300]),
-              ...list
+              Expanded(
+                child: ListView.builder(
+                  itemCount: itemCount,
+                  // 性能优化：addAutomaticKeepAlives=false + addRepaintBoundaries=true
+                  // 减少 widget 重建范围
+                  addAutomaticKeepAlives: false,
+                  addRepaintBoundaries: true,
+                  itemBuilder: (context, index) {
+                    final frame = messages[index];
+                    return Container(
+                        margin: const EdgeInsets.only(top: 2, bottom: 2),
+                        child: Row(
+                          children: [
+                            Expanded(child: Text(frame.payloadDataAsString)),
+                            const SizedBox(width: 5),
+                            SizedBox(
+                                width: 130,
+                                child: SelectionContainer.disabled(
+                                    child: Text(frame.time.format(),
+                                        style: const TextStyle(fontSize: 12, color: Colors.grey))))
+                          ],
+                        ));
+                  },
+                ),
+              ),
             ],
           );
         },
