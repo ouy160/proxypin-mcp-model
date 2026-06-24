@@ -30,7 +30,7 @@ class _DebugFileOutput extends LogOutput {
   void output(OutputEvent event) {
     if (!kReleaseMode) {
       try {
-        _file ??= File('proxypin_debug.log');
+        _file ??= File('${Platform.resolvedExecutable.substring(0, Platform.resolvedExecutable.lastIndexOf(Platform.pathSeparator))}${Platform.pathSeparator}proxypin_debug.log');
         _file!.writeAsStringSync('${event.lines.join('\n')}\n', mode: FileMode.append);
       } catch (_) {}
     }
