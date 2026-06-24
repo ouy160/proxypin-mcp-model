@@ -110,9 +110,12 @@ class SseChannelHandler extends ChannelHandler<Uint8List> {
         _processDecompressedData(channelContext, channel, decoded);
       }
     }
-
-    // Update message body with decoded content for text display
-    if (message is HttpResponse) {
+    // 更新 message body
+    // 性能修复：对于 Brotli 压缩的 SSE 响应，channelRead 中收到的是 Brotli 编码字节，
+    // 不应该直接写入 message.body（否则 getBodyString 会重复同步 brDecode，阻塞主线程）
+    // 正确的做法：message.body 只存解压后的明文，由 _processDecompressedData 负责
+    // 对于非 Brotli 响应，dataToDecode 已经是 chunked-decoded 明文，可以直接写入
+    if (!_isBrotli && message is HttpResponse) {
       if (message.body == null) {
         message.body = dataToDecode.toList();
       } else {
@@ -121,7 +124,6 @@ class SseChannelHandler extends ChannelHandler<Uint8List> {
         message.body = existing;
       }
     }
-    // For non-brotli, decode SSE messages directly
     // For brotli, SSE decoding is handled in _processDecompressedData
     if (!_isBrotli) {
       _decodeSseAndNotify(channelContext, channel, dataToDecode);

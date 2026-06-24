@@ -131,12 +131,18 @@ abstract class HttpMessage {
     try {
       List<int> rawBody = body!;
 
-      if (headers.isGzip) {
-        rawBody = gzipDecode(body!);
-      } else if (headers.contentEncoding == 'br') {
-        rawBody = brDecode(body!);
-      } else if (headers.contentEncoding == 'deflate') {
-        rawBody = zlibDecode(body!);
+      // 性能修复：SSE 响应的 body 已经是解压后的明文（SseChannelHandler 边收边解压）
+      // 不能再用 brDecode 解码（否则会失败或乱码）
+      // 判断条件：content-type 为 text/event-stream（SSE），且 content-encoding 为 br
+      bool isSseResponse = headers.contentType.toLowerCase().contains('text/event-stream');
+      if (!isSseResponse) {
+        if (headers.isGzip) {
+          rawBody = gzipDecode(body!);
+        } else if (headers.contentEncoding == 'br') {
+          rawBody = brDecode(body!);
+        } else if (headers.contentEncoding == 'deflate') {
+          rawBody = zlibDecode(body!);
+        }
       }
 
       if (charset == 'utf-8' || charset == 'utf8') {
@@ -187,25 +193,11 @@ abstract class HttpMessage {
   void addMessage(WebSocketFrame frame) {
     messagesNotifier.value = [...messagesNotifier.value, frame];
   }
-
+  
   // 批量添加消息，只触发一次通知
-  // 性能修复：限制最大消息数为 5000 条，防止长 SSE 流导致内存爆炸和 UI 卡死
-  // 超出上限时丢弃最早的消息（FIFO 队列）
-  static const int _maxMessages = 5000;
   void addMessages(List<WebSocketFrame> frames) {
     if (frames.isEmpty) return;
-    final current = messagesNotifier.value;
-    if (current.length >= _maxMessages) {
-      // 丢弃超出部分最早的消息
-      final dropCount = current.length - _maxMessages + frames.length;
-      final newList = <WebSocketFrame>[
-        ...current.sublist(dropCount.clamp(0, current.length)),
-        ...frames,
-      ];
-      messagesNotifier.value = newList;
-    } else {
-      messagesNotifier.value = [...current, ...frames];
-    }
+    messagesNotifier.value = [...messagesNotifier.value, ...frames];
   }
 }
 
